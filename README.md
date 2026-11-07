@@ -37,7 +37,7 @@ Les clés (bot Discord, clé API Raid-Helper) restent sur votre PC, chiffrées p
 ## Fabriquer le .exe soi-même
 
 Python 3 pour Windows, puis double-clic sur `FABRIQUER-EXE.bat` (le programme est créé dans `dist`).
-Chaque version publiée ici est fabriquée automatiquement par GitHub (`.github/workflows/build.yml`).
+Chaque version publiée ici est fabriquée automatiquement par GitHub (`.github/workflows/build.yml`) dès que `VERSION` change dans `GBM_Manager.py`.
 
 ## Crédits
 

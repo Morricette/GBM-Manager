@@ -1,10 +1,11 @@
 # Fabrique GBM_Manager.exe sur Windows et le publie dans une version (Release) GitHub.
-# Lancement : pousser une etiquette vX.Y.Z (git tag v1.0.0 && git push origin v1.0.0), ou bouton "Run workflow".
+# Se lance a chaque envoi sur main : si la version (VERSION dans GBM_Manager.py) n'est pas encore publiee,
+# le .exe est fabrique et la version vX.Y.Z est creee. Bouton "Run workflow" : meme chose a la main.
 name: Fabriquer GBM_Manager.exe
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,31 +16,31 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: PyInstaller
-        run: python -m pip install --upgrade pyinstaller
-      - name: Fabriquer le .exe
-        run: python -m PyInstaller --noconfirm --onefile --noconsole --name GBM_Manager --icon icone.ico --add-data "icone.ico;." GBM_Manager.py
-      - name: Verifier la version
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          v=$(grep -m1 '^VERSION = ' GBM_Manager.py | cut -d'"' -f2)
-          test "v$v" = "${GITHUB_REF_NAME}" || { echo "VERSION ($v) differente de l'etiquette ${GITHUB_REF_NAME}"; exit 1; }
-      - name: Garder le .exe (essai sans version)
-        if: "!startsWith(github.ref, 'refs/tags/v')"
-        uses: actions/upload-artifact@v4
-        with:
-          name: GBM_Manager
-          path: dist/GBM_Manager.exe
-      - name: Publier la version
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Version a publier
+        id: v
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/GBM_Manager.exe LISEZMOI.txt GUIDE-BOT-DISCORD.txt \
-            --title "GBM Manager ${GITHUB_REF_NAME#v}" \
+          v=$(grep -m1 '^VERSION = ' GBM_Manager.py | cut -d'"' -f2)
+          echo "tag=v$v" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" >/dev/null 2>&1; then echo "nouvelle=non" >> "$GITHUB_OUTPUT"; echo "v$v deja publiee"; else echo "nouvelle=oui" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-python@v5
+        if: steps.v.outputs.nouvelle == 'oui'
+        with:
+          python-version: "3.12"
+      - name: Fabriquer le .exe
+        if: steps.v.outputs.nouvelle == 'oui'
+        run: |
+          python -m pip install --upgrade pyinstaller
+          python -m PyInstaller --noconfirm --onefile --noconsole --name GBM_Manager --icon icone.ico --add-data "icone.ico;." GBM_Manager.py
+      - name: Publier la version
+        if: steps.v.outputs.nouvelle == 'oui'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          t="${{ steps.v.outputs.tag }}"
+          gh release create "$t" dist/GBM_Manager.exe LISEZMOI.txt GUIDE-BOT-DISCORD.txt --target "$GITHUB_SHA" \
+            --title "GBM Manager ${t#v}" \
             --notes "Telechargez GBM_Manager.exe ci-dessous. Mode d'emploi : LISEZMOI.txt, et l'onglet Aide de l'application."
