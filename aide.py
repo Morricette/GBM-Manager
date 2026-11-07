@@ -1,0 +1,76 @@
+"""GuildByMorricette (GBM) Manager - texte de l'onglet Aide (guide pas a pas)."""
+
+LIENS = [
+    ("Nouvelles versions (GitHub)", "https://github.com/Morricette/GBM-Manager/releases/latest"),
+    ("Portail développeurs Discord", "https://discord.com/developers/applications"),
+    ("Inviter Raid-Helper", "https://raid-helper.dev"),
+    ("Discord de l'addon", "https://discord.gg/5fbmYu8cY"),
+    ("Addon sur CurseForge", "https://www.curseforge.com/wow/addons/guildbymorricette"),
+]
+
+TEXTE = """GUILDBYMORRICETTE (GBM) MANAGER — GUIDE
+
+GBM Manager relie l'addon GuildByMorricette au serveur Discord de la guilde. Il sert au chef de guilde et aux officiers, sur le PC où ils jouent. Trois outils :
+  • Recensement : roster de la guilde comparé aux membres du Discord, message tenu à jour dans un salon des officiers (+ fichier CSV).
+  • Commandes : les commandes aux artisans apparaissent dans un salon Discord en quelques secondes, avec mention de l'artisan visé ; les commandes terminées sont effacées après un délai.
+  • Raid-Helper : chaque événement publié dans l'addon devient un événement Raid-Helper, joueurs déjà inscrits ; les places libres restent ouvertes aux inscriptions sur Discord.
+
+Nouvelles versions : page GitHub de GBM Manager (bouton plus bas), fichier GBM_Manager.exe.
+
+Pourquoi une application ? Un addon n'a pas accès à Internet. L'addon écrit dans des fichiers du jeu (fichier de sauvegarde, journal du chat) et GBM Manager les lit pour parler à Discord.
+
+
+ÉTAPE 1 — LE BOT DISCORD (un administrateur du serveur, une seule fois)
+  1. Portail des développeurs Discord (bouton plus bas) : « New Application », nom « GBM Manager ».
+  2. Onglet Bot : activer « Server Members Intent », enregistrer. Décocher « Bot public ».
+     « Réinitialiser le token », « Copier » : c'est la CLÉ DU BOT. Elle est secrète : collez-la seulement ici.
+  3. Onglet OAuth2, générateur d'URL : cocher « bot », puis les droits :
+     Voir les salons, Envoyer des messages, Intégrer des liens, Joindre des fichiers, Gérer les messages.
+     Ouvrir l'adresse, choisir le serveur, « Autoriser ».
+  4. Créer les salons : un salon privé des officiers (recensement), un salon des commandes (visible de ceux
+     qui doivent les voir), un salon des événements (Raid-Helper). Le bot doit pouvoir y écrire.
+  5. Discord, Paramètres > Avancés : activer « Mode développeur ». Clic droit sur le serveur ou un salon :
+     « Copier l'identifiant ».
+
+ÉTAPE 2 — RAID-HELPER (facultatif)
+  1. raid-helper.dev : « Invite », choisir le serveur.
+  2. Un administrateur tape /apikey dans Discord : la CLÉ API du serveur s'affiche. Elle est secrète.
+  3. Modèle (facultatif) : le numéro du modèle d'événement Raid-Helper à utiliser (sinon celui par défaut).
+
+ÉTAPE 3 — DANS LE JEU (chef de guilde ou officier)
+  1. Addon GuildByMorricette 1.16.0 ou plus.
+  2. /mg recensement : onglet Recensement de la fenêtre Guilde. Cocher « Relais Discord sur ce PC ».
+     L'addon active le journal du chat (/chatlog) pour le relais en direct.
+  3. Taper /reload une fois : le jeu écrit le fichier de sauvegarde lu par GBM Manager.
+  4. Tous les membres : donner leur pseudo Discord (onglet Recensement, ou /mg discord Pseudo).
+
+ÉTAPE 4 — DANS GBM MANAGER (onglet Réglages)
+  1. Fichier de sauvegarde et journal du chat : trouvés tout seuls (sinon « Parcourir… »).
+     Sauvegarde : <jeu>\\_forever_\\WTF\\Account\\<COMPTE>\\SavedVariables\\GuildeForever.lua
+     Journal du chat : <jeu>\\_forever_\\Logs\\WoWChatLog.txt
+  2. Coller la clé du bot et l'identifiant du serveur.
+  3. Coller l'identifiant de chaque salon voulu (laisser vide un outil qu'on n'utilise pas).
+  4. Commandes : délai avant d'effacer une commande reçue ou annulée, mention de l'artisan visé.
+  5. Raid-Helper : clé API, identifiant du salon des événements, modèle (facultatif).
+  6. « Enregistrer », puis « Tester ». Laisser GBM Manager ouvert pendant que vous jouez.
+  En jeu, /mg relais test envoie une ligne de test : elle doit apparaître dans l'onglet Journal.
+
+CE QUI SE PASSE ENSUITE
+  • Commandes et événements : publiés quelques secondes après chaque changement en jeu (journal du chat).
+  • Recensement : mis à jour à chaque /reload ou déconnexion (le même message est modifié).
+  • À chaque /reload ou déconnexion, GBM Manager rattrape aussi tout ce qui aurait été manqué.
+
+DÉPANNAGE
+  • « Clé refusée » : recopier la clé du bot (Discord) ou la clé API (/apikey, Raid-Helper).
+  • « Accès refusé » : donner au bot les droits dans le salon, activer « Server Members Intent ».
+  • Les commandes n'arrivent qu'au /reload : vérifier « Relais Discord sur ce PC » en jeu, puis /mg relais test.
+  • Un joueur pas reconnu sur Discord : il doit donner son pseudo (/mg discord Pseudo), identique à son nom
+    d'utilisateur ou à son nom sur le serveur (majuscules, accents, espaces, points et tirets ignorés).
+  • Windows avertit au lancement (programme non signé) : « Informations complémentaires », « Exécuter quand même ».
+
+SÉCURITÉ
+  Les clés sont enregistrées chiffrées pour votre session Windows (dossier %APPDATA%\\GBM-Manager). Ne les
+  donnez à personne. Si une clé a fuité : la régénérer (portail Discord, ou /apikey sur Raid-Helper).
+
+Idée de Mekinox et de la guilde Mortem In Anima. Écrit pour GuildByMorricette (Morricette), licence GPL.
+"""

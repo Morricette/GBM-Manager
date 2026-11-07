@@ -1,0 +1,63 @@
+GuildByMorricette (GBM) Manager 1.0.0 (application Windows)
+===========================================================
+
+Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
+Licence GPL-2.0-or-later, comme l'addon. Le guide complet est dans l'onglet « Aide » de l'application.
+Telechargement et nouvelles versions : https://github.com/Morricette/GBM-Manager/releases/latest
+
+GBM Manager relie l'addon GuildByMorricette (1.16.0 ou plus) au serveur Discord de la guilde.
+Il sert au chef de guilde et aux officiers, sur le PC ou ils jouent. Trois outils, chacun facultatif :
+
+1. Recensement
+   Roster complet (principaux, rerolls, arrivees, departs, pseudos Discord) compare aux membres du serveur.
+   Un message tenu a jour dans un salon prive des officiers, avec la liste complete en fichier CSV :
+   joueurs presents en jeu et sur Discord, joueurs sans pseudo ou introuvables, membres du Discord hors
+   guilde, arrivees et departs des 7 derniers jours, effectifs.
+
+2. Commandes aux artisans
+   Chaque commande passee dans l'addon apparait dans un salon Discord quelques secondes apres, avec
+   mention de l'artisan vise (s'il a donne son pseudo Discord). Le message change d'icone quand la commande
+   est prise, recue ou annulee, puis il est efface apres le delai choisi (24 heures par defaut).
+
+3. Raid-Helper
+   Chaque evenement publie dans l'onglet Composition de raid de l'addon devient un evenement Raid-Helper, avec les
+   joueurs deja places inscrits d'avance. Les places libres restent ouvertes : les autres s'inscrivent sur
+   Discord comme d'habitude. Un evenement retire dans l'addon est supprime de Raid-Helper.
+
+Ce qu'il faut
+  - Le chef de guilde ou un officier qui joue sur ce PC, avec « Relais Discord sur ce PC » coche
+    (onglet Recensement de la fenetre Guilde, /mg recensement).
+  - Le bot Discord du serveur : voir GUIDE-BOT-DISCORD.txt.
+  - Pour Raid-Helper : le bot Raid-Helper sur le serveur et sa cle API (/apikey).
+
+Utilisation
+  1. Extraire le zip, puis lancer GBM_Manager.exe (pas depuis l'interieur du zip).
+  2. Onglet Reglages : fichier de sauvegarde et journal du chat (trouves tout seuls en general) :
+       <dossier du jeu>\_forever_\WTF\Account\<COMPTE>\SavedVariables\GuildeForever.lua
+       <dossier du jeu>\_forever_\Logs\WoWChatLog.txt
+  3. Coller la cle du bot, l'identifiant du serveur, et l'identifiant de chaque salon voulu
+     (laisser vide un outil qu'on n'utilise pas). Raid-Helper : cle API et salon des evenements.
+  4. « Enregistrer », puis « Tester ».
+  5. En jeu : cocher « Relais Discord sur ce PC », taper /reload une fois, puis /mg relais test :
+     la ligne de test doit apparaitre dans l'onglet Journal de l'application.
+  6. Laisser l'application ouverte pendant que vous jouez.
+
+Comment ca marche
+  Un addon n'a pas acces a Internet. L'addon s'envoie a lui-meme des chuchotements invisibles que le jeu
+  ecrit dans le journal du chat (/chatlog) : l'application les lit en direct (commandes, evenements).
+  Le fichier de sauvegarde, ecrit a la deconnexion ou au /reload, sert au recensement et a rattraper ce qui
+  aurait ete manque (application fermee, journal du chat coupe).
+
+Bon a savoir
+  - Rapprochement des pseudos : le pseudo donne par le joueur (/mg discord Pseudo) est compare au nom
+    d'utilisateur, au nom affiche et au surnom sur le serveur, sans tenir compte des majuscules, des accents,
+    des espaces, des points ni des tirets. Les bots du serveur ne sont pas comptes.
+  - Raid-Helper : un joueur sans pseudo Discord reconnu est inscrit sous son nom de personnage, sans compte.
+  - Une seule copie de l'application par guilde suffit (celle du chef ou d'un officier).
+  - Windows peut afficher un avertissement au premier lancement (programme non signe) : « Informations
+    complementaires », puis « Executer quand meme ».
+  - Reglages et cles : dossier %APPDATA%\GBM-Manager (cles chiffrees pour votre session Windows).
+
+Fabriquer le .exe soi-meme
+  Python 3 pour Windows, puis double-clic sur FABRIQUER-EXE.bat : le programme est cree dans le dossier dist.
+  Essai sans Discord : python GBM_Manager.py --demo <GuildeForever.lua> <membres.json>

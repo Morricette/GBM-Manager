@@ -1,0 +1,46 @@
+GuildByMorricette (GBM) Manager - creer le bot Discord (5 minutes, par un administrateur du serveur)
+=================================================================================================
+
+Le bot lit la liste des membres du serveur, ecrit et efface ses propres messages dans les salons choisis.
+Il ne lit pas les messages des joueurs et ne fait rien d'autre.
+
+1. Creer l'application
+   - Ouvrir https://discord.com/developers/applications et se connecter avec son compte Discord.
+   - Cliquer sur « New Application », la nommer (par exemple « GBM Manager »), accepter les conditions.
+
+2. Le bot et sa cle
+   - Menu de gauche : « Bot ».
+   - Dans « Privileged Gateway Intents », activer « SERVER MEMBERS INTENT », puis « Save Changes ».
+     (Sans cette option, le bot ne peut pas lire la liste des membres.)
+   - Decocher « Public Bot » : vous seul pourrez l'inviter sur un serveur.
+   - Cliquer sur « Reset Token », confirmer, puis « Copy ». C'est la cle du bot.
+     Elle est secrete : ne la donnez a personne et ne la collez nulle part ailleurs que dans l'application.
+     Si elle a fuite, refaites « Reset Token » : l'ancienne ne marche plus.
+
+3. Inviter le bot sur le serveur
+   - Menu de gauche : « OAuth2 », puis « OAuth2 URL Generator ».
+   - Cocher « bot » dans « Scopes ».
+   - Dans « Bot Permissions », cocher : View Channels, Send Messages, Embed Links, Attach Files,
+     Manage Messages (pour effacer les commandes terminees).
+   - Copier l'adresse tout en bas, l'ouvrir dans le navigateur, choisir le serveur, « Autoriser ».
+   - Bot deja invite sans « Manage Messages » ? Refaire cette etape avec la case cochee (le bot reste en
+     place, ses droits sont mis a jour), ou lui donner ce droit dans le salon des commandes.
+
+4. Les salons (chacun facultatif)
+   - Recensement : un salon prive (#recensement), visible seulement des officiers.
+   - Commandes : un salon (#commandes) visible de ceux qui doivent voir les commandes.
+   - Evenements : le salon ou Raid-Helper publie les evenements (#evenements).
+   - Dans les parametres de chaque salon, « Permissions » : ajouter le bot (ou son role) avec
+     Voir le salon, Envoyer des messages, Integrer des liens, Joindre des fichiers, Gerer les messages.
+
+5. Raid-Helper (facultatif)
+   - Inviter Raid-Helper depuis https://raid-helper.dev (bouton « Invite »).
+   - Un administrateur tape /apikey dans Discord : la cle API du serveur s'affiche. Elle est secrete.
+
+6. Les identifiants a donner a l'application
+   - Discord : Parametres utilisateur > Avances > activer « Mode developpeur ».
+   - Clic droit sur l'icone du serveur > « Copier l'identifiant du serveur ».
+   - Clic droit sur chaque salon > « Copier l'identifiant du salon ».
+
+Dans l'application : coller la cle du bot, l'identifiant du serveur et ceux des salons, puis « Tester ».
+Les cles sont enregistrees chiffrees pour votre session Windows (dossier %APPDATA%\GBM-Manager).
