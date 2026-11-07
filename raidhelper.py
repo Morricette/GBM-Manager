@@ -1,7 +1,7 @@
 """GuildByMorricette (GBM) Manager - acces a Raid-Helper (API v4), avec seulement Python standard.
 
 Cle : la cle API du serveur, que montre la commande /apikey de Raid-Helper (administrateur du serveur Discord).
-Documentation : https://raid-helper.dev/documentation/api
+Documentation : https://raid-helper.xyz/documentation/api
 """
 import json
 import time

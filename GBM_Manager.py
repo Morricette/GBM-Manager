@@ -20,7 +20,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")

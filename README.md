@@ -22,7 +22,7 @@ Trois outils, chacun facultatif :
 - **Commandes aux artisans** : chaque commande passée dans l'addon arrive dans un salon Discord en quelques secondes,
   avec la mention de l'artisan visé. L'icône change quand elle est prise 🔨, reçue ✅ ou annulée ❌, puis le message
   est effacé après un délai réglable.
-- **Raid-Helper** : chaque composition publiée dans l'addon devient un événement [Raid-Helper](https://raid-helper.dev),
+- **Raid-Helper** : chaque composition publiée dans l'addon devient un événement [Raid-Helper](https://raid-helper.xyz) (le vrai, avec un tiret : attention aux faux bots au nom proche),
   avec les joueurs déjà placés inscrits d'avance. Les places libres restent ouvertes aux inscriptions sur Discord.
 
 ## Comment ça marche

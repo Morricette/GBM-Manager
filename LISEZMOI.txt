@@ -1,4 +1,4 @@
-GuildByMorricette (GBM) Manager 1.0.0 (application Windows)
+GuildByMorricette (GBM) Manager 1.0.1 (application Windows)
 ===========================================================
 
 Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
@@ -28,7 +28,8 @@ Ce qu'il faut
   - Le chef de guilde ou un officier qui joue sur ce PC, avec « Relais Discord sur ce PC » coche
     (onglet Recensement de la fenetre Guilde, /mg recensement).
   - Le bot Discord du serveur : voir GUIDE-BOT-DISCORD.txt.
-  - Pour Raid-Helper : le bot Raid-Helper sur le serveur et sa cle API (/apikey).
+  - Pour Raid-Helper : le vrai bot Raid-Helper (site officiel raid-helper.xyz) sur le serveur et sa cle API
+    (/apikey). Attention aux faux bots au nom proche.
 
 Utilisation
   1. Extraire le zip, puis lancer GBM_Manager.exe (pas depuis l'interieur du zip).

@@ -3,7 +3,7 @@
 LIENS = [
     ("Nouvelles versions (GitHub)", "https://github.com/Morricette/GBM-Manager/releases/latest"),
     ("Portail développeurs Discord", "https://discord.com/developers/applications"),
-    ("Inviter Raid-Helper", "https://raid-helper.dev"),
+    ("Inviter Raid-Helper", "https://raid-helper.xyz"),
     ("Discord de l'addon", "https://discord.gg/5fbmYu8cY"),
     ("Addon sur CurseForge", "https://www.curseforge.com/wow/addons/guildbymorricette"),
 ]
@@ -33,8 +33,11 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. L'addon écrit d
      « Copier l'identifiant ».
 
 ÉTAPE 2 — RAID-HELPER (facultatif)
-  1. raid-helper.dev : « Invite », choisir le serveur.
-  2. Un administrateur tape /apikey dans Discord : la CLÉ API du serveur s'affiche. Elle est secrète.
+  1. Site officiel raid-helper.xyz : « Invite Bot », choisir le serveur.
+     ATTENTION aux faux bots au nom proche (« RaidHelper » sans tiret...) : le vrai s'appelle Raid-Helper
+     et n'a pas de commandes de points ni d'avertissements. Salon des événements privé : lui donner le droit d'y écrire.
+  2. Un administrateur tape /apikey dans Discord et choisit la commande dans la liste : la CLÉ API du serveur
+     s'affiche. Elle est secrète.
   3. Modèle (facultatif) : le numéro du modèle d'événement Raid-Helper à utiliser (sinon celui par défaut).
 
 ÉTAPE 3 — DANS LE JEU (chef de guilde ou officier)

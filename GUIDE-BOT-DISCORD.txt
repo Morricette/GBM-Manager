@@ -34,8 +34,11 @@ Il ne lit pas les messages des joueurs et ne fait rien d'autre.
      Voir le salon, Envoyer des messages, Integrer des liens, Joindre des fichiers, Gerer les messages.
 
 5. Raid-Helper (facultatif)
-   - Inviter Raid-Helper depuis https://raid-helper.dev (bouton « Invite »).
-   - Un administrateur tape /apikey dans Discord : la cle API du serveur s'affiche. Elle est secrete.
+   - Inviter Raid-Helper depuis le site officiel https://raid-helper.xyz (bouton « Invite Bot »).
+     Attention aux faux bots au nom proche (« RaidHelper » sans tiret...) : le vrai s'appelle Raid-Helper.
+   - Si le salon des evenements est prive, donner a Raid-Helper le droit d'y ecrire.
+   - Un administrateur tape /apikey dans Discord et choisit la commande dans la liste : la cle API du
+     serveur s'affiche. Elle est secrete.
 
 6. Les identifiants a donner a l'application
    - Discord : Parametres utilisateur > Avances > activer « Mode developpeur ».
