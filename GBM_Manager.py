@@ -20,7 +20,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -196,11 +196,12 @@ class Moteur:
         fichier = cfg.get("fichier")
         if fichier and os.path.exists(fichier):
             m = os.path.getmtime(fichier)
-            if self.demande or (cfg.get("surveiller", True) and self.mtime and m != self.mtime):
+            nouveau = self.demande or (cfg.get("surveiller", True) and self.mtime and m != self.mtime)
+            self.mtime = m        # 1.0.2 : retenu avant la lecture, sinon une erreur la faisait refaire toutes les 2 s
+            if nouveau:
                 self.demande = False
                 self.log("Le jeu a enregistré le fichier de sauvegarde : mise à jour.")
                 self.depuis_sauvegarde()
-            self.mtime = m
         # 3) menage des commandes terminees (toutes les minutes)
         if time.time() - self.dernier_menage > 60:
             self.dernier_menage = time.time()

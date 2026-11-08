@@ -69,6 +69,9 @@ def lire_export(chemin):
     with open(chemin, "rb") as f:
         texte = f.read()
     m = re.search(rb'^' + VARIABLE.encode() + rb'\s*=\s*"((?:[^"\\]|\\.)*)"', texte, re.M | re.S)
+    if not m and re.search(rb'^' + VARIABLE.encode() + rb'\s*=\s*\{', texte, re.M):
+        raise ValueError("L'export du fichier de sauvegarde est abime (bug de l'addon 1.16.0 de test) : installez la "
+                         "derniere version de l'addon, puis tapez /reload.")
     if not m:
         raise ValueError("Pas de recensement dans ce fichier. En jeu, ouvrez l'onglet Recensement de la fenetre Guilde "
                          "(rang autorise par le chef de guilde), puis deconnectez-vous ou tapez /reload.")

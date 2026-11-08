@@ -1,4 +1,4 @@
-GuildByMorricette (GBM) Manager 1.0.1 (application Windows)
+GuildByMorricette (GBM) Manager 1.0.2 (application Windows)
 ===========================================================
 
 Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
