@@ -27,8 +27,9 @@ Trois outils, chacun facultatif :
 
 ## Comment ça marche
 
-Un addon n'a pas accès à Internet. L'addon écrit dans des fichiers du jeu : le journal du chat (relais en direct)
-et le fichier de sauvegarde (à la déconnexion ou au `/reload`). GBM Manager les lit et parle à Discord avec un bot
+Un addon n'a pas accès à Internet. Sur le PC du relais, l'addon affiche une fine bande de couleurs en haut à gauche
+de l'écran du jeu, que GBM Manager lit à l'écran (relais en direct) ; le fichier de sauvegarde, écrit à la déconnexion
+ou au `/reload`, sert au recensement et au rattrapage. Jouez en mode fenêtré ou plein écran fenêtré. GBM Manager les lit et parle à Discord avec un bot
 que vous créez sur votre serveur ([GUIDE-BOT-DISCORD.txt](GUIDE-BOT-DISCORD.txt)).
 
 Les clés (bot Discord, clé API Raid-Helper) restent sur votre PC, chiffrées pour votre session Windows

@@ -1,8 +1,8 @@
 """GuildByMorricette (GBM) Manager - relais des commandes et des evenements vers Discord et Raid-Helper.
 
 Deux sources, traitees de la meme facon (chaque traitement compare a ce qui est deja publie) :
-  - le journal du chat du jeu (Logs\\WoWChatLog.txt) : lignes "GBM1~type~numero~k/n~texte" ecrites par l'addon
-    (case "Relais Discord sur ce PC"), lues en continu : publication en quelques secondes ;
+  - la bande de pixels affichee par l'addon (case "Relais Discord sur ce PC"), lue a l'ecran par pixel.py :
+    publication en quelques secondes (le lecteur du journal du chat plus bas n'est plus utilise depuis 1.0.3) ;
   - l'export du fichier de sauvegarde (listes "orders" et "raids") : rattrapage a chaque /reload ou deconnexion.
 """
 import json
@@ -171,7 +171,7 @@ class Relais:
                 return
             contenu, mentions = "", []
             if self.cfg.get("mentionner", True) and o.get("to"):
-                uid = self.id_discord(o["to"])
+                uid = self.id_discord(o["to"]) or self.id_pseudo(o.get("toDiscord"))
                 if uid:
                     contenu, mentions = "<@%s>" % uid, [uid]
             msg = self.discord().message(salon, contenu, self._embed_commande(o), mentions)
@@ -215,6 +215,21 @@ class Relais:
     def rh(self):
         return RaidHelper(self.montrer(self.cfg.get("cle_rh")))
 
+    def organisateur(self, e):
+        """ID Discord de l'organisateur : son pseudo, sinon celui des Reglages, sinon le proprietaire du serveur."""
+        chef = self.id_pseudo(e.get("leaderDiscord")) if e.get("leaderDiscord") else None
+        if not chef and e.get("by"):
+            chef = self.id_discord(e["by"])
+        if not chef and str(self.cfg.get("organisateur") or "").strip().isdigit():
+            chef = str(self.cfg["organisateur"]).strip()
+        if not chef:
+            if not getattr(self, "_proprietaire", None):
+                self._proprietaire = str(self.discord().serveur(self.cfg["serveur"]).get("owner_id") or "")
+            chef = self._proprietaire
+            if chef and e.get("by"):
+                self.log("Raid-Helper : %s n'est pas reconnu sur Discord, le propriétaire du serveur est noté organisateur." % e["by"])
+        return chef
+
     def evenement(self, e):
         if not (self.cfg.get("cle_rh") and self.cfg.get("salon_rh") and self.cfg.get("serveur")) or not e.get("id"):
             return
@@ -236,9 +251,7 @@ class Relais:
                  "description": (desc + "\n\n" if desc else "") + "%s · %d joueurs · préparé avec GuildByMorricette" % (type_txt, e.get("size", 40))}
         if self.cfg.get("modele_rh"):
             corps["templateId"] = str(self.cfg["modele_rh"])
-        chef = self.id_pseudo(e.get("leaderDiscord")) if e.get("leaderDiscord") else None
-        if chef:
-            corps["leaderId"] = chef
+        corps["leaderId"] = self.organisateur(e)    # obligatoire pour Raid-Helper
         rh = self.rh()
         if not r or not r.get("rh"):
             try:

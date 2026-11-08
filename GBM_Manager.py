@@ -3,7 +3,7 @@
 Ecrit pour GuildByMorricette (licence GPL-2.0-or-later). Idee proposee par Mekinox et la guilde Mortem In Anima.
 Trois outils : recensement (roster de la guilde compare aux membres du serveur Discord, message tenu a jour dans
 un salon des officiers), commandes aux artisans publiees sur Discord en quelques secondes, evenements publies dans
-l'addon envoyes a Raid-Helper avec les joueurs inscrits. Lit le fichier de sauvegarde et le journal du chat du jeu.
+l'addon envoyes a Raid-Helper avec les joueurs inscrits. Lit le fichier de sauvegarde et la bande de pixels de l'addon.
 
 Lancement :  GBM_Manager.exe            fenetre
              GBM_Manager.exe --demo     essai sans Discord (fausse liste de membres), affiche le message
@@ -20,7 +20,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -81,7 +81,8 @@ def charger_config():
     c.setdefault("ignorer_roles", [])
     c.setdefault("messages", {})        # { "serveur:salon:guilde" : id du message a modifier }
     c.setdefault("surveiller", True)
-    c.setdefault("journal", "")             # journal du chat (vide = deduit du fichier de sauvegarde)
+    c.setdefault("journal", "")             # (plus utilise depuis 1.0.3 : le relais passe par la bande de pixels)
+    c.setdefault("organisateur", "")        # ID Discord de l'organisateur Raid-Helper par defaut (facultatif)
     c.setdefault("salon_commandes", "")
     c.setdefault("delai_heures", 24)
     c.setdefault("mentionner", True)
@@ -153,27 +154,57 @@ def resume(res):
 
 # --- Travail en arriere-plan (un seul fil : tout ce qui parle a Discord et a Raid-Helper) ----------------------------
 class Moteur:
-    """Surveille le journal du chat (relais en direct) et le fichier de sauvegarde (recensement et rattrapage)."""
+    """Lit la bande de pixels de l'addon (relais en direct) et le fichier de sauvegarde (recensement et rattrapage)."""
 
     def __init__(self, cfg, journal_ui):
         self.cfg = cfg
         self.log = journal_ui
         self.etat = relais.Etat(ETAT)
         self.relais = relais.Relais(cfg, self.etat, journal_ui, montrer)
-        self.lecteur = None
+        self.verrou = threading.Lock()
+        self.pixels = None
+        self.etat_pixels = ""
         self.mtime = 0
         self.dernier_menage = 0
         self.demande = False      # "Mettre a jour maintenant"
         self.actif = True
         self.fil = threading.Thread(target=self.boucle, daemon=True)
+        self.fil_pixels = threading.Thread(target=self.boucle_pixels, daemon=True)
 
-    def chemin_journal(self):
-        return self.cfg.get("journal") or relais.chemin_journal(self.cfg.get("fichier"))
+    def demarrer(self):
+        self.fil.start()
+        self.fil_pixels.start()
+
+    def boucle_pixels(self):
+        """Relais en direct : lit la bande de couleurs de l'addon une dizaine de fois par seconde."""
+        try:
+            import pixel
+            self.pixels = pixel.Lecteur()
+            self.pixels.capture = pixel.Capture()
+        except Exception as e:      # hors Windows : pas de capture d'ecran
+            self.etat_pixels = "indisponible (%s)" % e
+            return
+        while self.actif:
+            if self.cfg.get("salon_commandes") or self.cfg.get("cle_rh"):
+                try:
+                    messages = self.pixels.tour()
+                except Exception as e:
+                    messages = []
+                    self.pixels.etat = "erreur de capture (%s)" % e
+                if self.pixels.etat != self.etat_pixels:
+                    if self.pixels.etat == "bande lue":
+                        self.log("Relais : bande de couleurs du jeu trouvée, lecture en direct.")
+                    self.etat_pixels = self.pixels.etat
+                for genre, donnees in messages:
+                    with self.verrou:
+                        self.relais.traiter(genre, donnees)
+            time.sleep(0.1)
 
     def boucle(self):
         while self.actif:
             try:
-                self.tour()
+                with self.verrou:
+                    self.tour()
             except (ValueError, OSError, ErreurDiscord, ErreurRaidHelper) as e:
                 self.log("⚠ " + str(e))
             except Exception as e:  # erreur inattendue : affichee, l'application continue
@@ -182,16 +213,6 @@ class Moteur:
 
     def tour(self):
         cfg = self.cfg
-        # 1) relais en direct (journal du chat)
-        if cfg.get("salon_commandes") or cfg.get("cle_rh"):
-            chemin = self.chemin_journal()
-            if self.lecteur is None or self.lecteur.chemin != chemin:
-                self.lecteur = relais.Journal(chemin)
-                if chemin and not os.path.exists(chemin):
-                    self.log("Journal du chat introuvable (%s) : en jeu, cochez « Relais Discord sur ce PC » "
-                             "(onglet Recensement), puis /reload." % chemin)
-            for genre, donnees in self.lecteur.lire():
-                self.relais.traiter(genre, donnees)
         # 2) fichier de sauvegarde ecrit par le jeu (deconnexion ou /reload) : recensement et rattrapage
         fichier = cfg.get("fichier")
         if fichier and os.path.exists(fichier):
@@ -281,7 +302,7 @@ def fenetre():
 
     # Reglages -----------------------------------------------------------------------------------------------------
     v = {k: tk.StringVar(value=str(cfg.get(k) or "")) for k in
-         ("fichier", "journal", "serveur", "salon", "guilde", "salon_commandes", "delai_heures", "salon_rh", "modele_rh")}
+         ("fichier", "serveur", "salon", "guilde", "salon_commandes", "delai_heures", "salon_rh", "modele_rh", "organisateur")}
     v["cle"] = tk.StringVar(value=montrer(cfg["cle"]))
     v["cle_rh"] = tk.StringVar(value=montrer(cfg["cle_rh"]))
     v_mention = tk.BooleanVar(value=bool(cfg.get("mentionner", True)))
@@ -309,8 +330,9 @@ def fenetre():
 
     s1 = section("Jeu", 0)
     champ(s1, 0, "Fichier de sauvegarde :", "fichier", parcourir=lambda: choisir("fichier", "GuildeForever.lua (dossier WTF)", "GuildeForever.lua"))
-    champ(s1, 1, "Journal du chat :", "journal", parcourir=lambda: choisir("journal", "WoWChatLog.txt (dossier Logs)", "WoWChatLog.txt"))
-    ttk.Label(s1, text="Journal du chat vide = trouvé tout seul à côté du jeu (dossier _forever_\\Logs).", foreground="#777").grid(row=2, column=1, sticky="w", padx=4)
+    ttk.Label(s1, text="Relais en direct : GBM Manager lit la bande de couleurs en haut à gauche du jeu.\n"
+                       "Jeu en fenêtré ou plein écran fenêtré, coin non couvert par une autre fenêtre.",
+              foreground="#777").grid(row=1, column=1, sticky="w", padx=4)
     s2 = section("Discord (bot GBM Manager)", 1)
     champ(s2, 0, "Clé du bot :", "cle", cache=True)
     champ(s2, 1, "ID du serveur :", "serveur")
@@ -326,6 +348,7 @@ def fenetre():
     champ(s5, 0, "Clé API (/apikey) :", "cle_rh", cache=True)
     champ(s5, 1, "ID du salon des événements :", "salon_rh", aide_txt="vide = pas de Raid-Helper")
     champ(s5, 2, "Modèle (facultatif) :", "modele_rh", aide_txt="numéro du modèle Raid-Helper")
+    champ(s5, 3, "Organisateur (facultatif) :", "organisateur", aide_txt="ID Discord ; vide = propriétaire du serveur")
 
     boutons = ttk.Frame(t_reg)
     boutons.grid(row=5, column=0, sticky="w", pady=8)
@@ -333,7 +356,7 @@ def fenetre():
     ttk.Label(root, textvariable=etat_bas, foreground="#555").pack(side="bottom", fill="x", padx=10, pady=(0, 6))
 
     def lire_champs():
-        for k in ("fichier", "journal", "serveur", "salon", "guilde", "salon_commandes", "salon_rh", "modele_rh"):
+        for k in ("fichier", "serveur", "salon", "guilde", "salon_commandes", "salon_rh", "modele_rh", "organisateur"):
             cfg[k] = v[k].get().strip()
         try:
             cfg["delai_heures"] = max(0.0, float(v["delai_heures"].get().replace(",", ".") or 24))
@@ -365,8 +388,8 @@ def fenetre():
             g = choisir_guilde(doc, cfg["guilde"])
             journal("Fichier de sauvegarde lu : guilde « %s », %d personnages, %d commandes, %d événements."
                     % (g.get("guild"), len(g.get("members", [])), len(g.get("orders", []) or []), len(g.get("raids", []) or [])))
-            j = moteur.chemin_journal()
-            journal(("Journal du chat trouvé : %s" if os.path.exists(j) else "Journal du chat pas encore créé : %s (cochez le relais en jeu, puis /reload)") % j)
+            ep = moteur.etat_pixels or "en attente"
+            journal("Relais en direct (bande de couleurs) : %s. En jeu, /mg relais test l'affiche 30 secondes." % ep)
             d = Discord(montrer(cfg["cle"]))
             journal("Bot Discord connecté : %s." % d.moi().get("username"))
             journal("Serveur : %s, %d membres lisibles." % (d.serveur(cfg["serveur"]).get("name"), len(d.membres(cfg["serveur"]))))
@@ -402,7 +425,7 @@ def fenetre():
     ttk.Button(boutons, text="Recensement en CSV…", command=enregistrer_csv).pack(side="left", padx=4)
 
     moteur = Moteur(cfg, journal)
-    moteur.fil.start()
+    moteur.demarrer()
     journal("%s %s démarré." % (NOM, VERSION))
     if premier:
         onglets.select(t_aide)

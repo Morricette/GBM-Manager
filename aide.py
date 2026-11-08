@@ -17,7 +17,7 @@ GBM Manager relie l'addon GuildByMorricette au serveur Discord de la guilde. Il 
 
 Nouvelles versions : page GitHub de GBM Manager (bouton plus bas), fichier GBM_Manager.exe.
 
-Pourquoi une application ? Un addon n'a pas accès à Internet. L'addon écrit dans des fichiers du jeu (fichier de sauvegarde, journal du chat) et GBM Manager les lit pour parler à Discord.
+Pourquoi une application ? Un addon n'a pas accès à Internet. Sur le PC du relais, l'addon affiche une fine bande de couleurs en haut à gauche de l'écran du jeu : GBM Manager la lit à l'écran et parle à Discord. Le fichier de sauvegarde, écrit à chaque /reload ou déconnexion, sert au recensement et au rattrapage.
 
 
 ÉTAPE 1 — LE BOT DISCORD (un administrateur du serveur, une seule fois)
@@ -43,23 +43,23 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. L'addon écrit d
 ÉTAPE 3 — DANS LE JEU (chef de guilde ou officier)
   1. Addon GuildByMorricette 1.16.0 ou plus.
   2. /mg recensement : onglet Recensement de la fenêtre Guilde. Cocher « Relais Discord sur ce PC ».
-     L'addon active le journal du chat (/chatlog) pour le relais en direct.
+     Jouer en mode fenêtré ou plein écran fenêtré (pas en plein écran exclusif), sans fenêtre sur le coin haut gauche du jeu.
   3. Taper /reload une fois : le jeu écrit le fichier de sauvegarde lu par GBM Manager.
   4. Tous les membres : donner leur pseudo Discord (onglet Recensement, ou /mg discord Pseudo).
 
 ÉTAPE 4 — DANS GBM MANAGER (onglet Réglages)
-  1. Fichier de sauvegarde et journal du chat : trouvés tout seuls (sinon « Parcourir… »).
-     Sauvegarde : <jeu>\\_forever_\\WTF\\Account\\<COMPTE>\\SavedVariables\\GuildeForever.lua
-     Journal du chat : <jeu>\\_forever_\\Logs\\WoWChatLog.txt
+  1. Fichier de sauvegarde : trouvé tout seul (sinon « Parcourir… »).
+     <jeu>\\_forever_\\WTF\\Account\\<COMPTE>\\SavedVariables\\GuildeForever.lua
   2. Coller la clé du bot et l'identifiant du serveur.
   3. Coller l'identifiant de chaque salon voulu (laisser vide un outil qu'on n'utilise pas).
   4. Commandes : délai avant d'effacer une commande reçue ou annulée, mention de l'artisan visé.
-  5. Raid-Helper : clé API, identifiant du salon des événements, modèle (facultatif).
+  5. Raid-Helper : clé API, identifiant du salon des événements, modèle et organisateur (facultatifs ; sans
+     organisateur reconnu, le propriétaire du serveur est noté organisateur).
   6. « Enregistrer », puis « Tester ». Laisser GBM Manager ouvert pendant que vous jouez.
-  En jeu, /mg relais test envoie une ligne de test : elle doit apparaître dans l'onglet Journal.
+  En jeu, /mg relais test affiche un message d'essai dans la bande de couleurs : il doit apparaître dans l'onglet Journal.
 
 CE QUI SE PASSE ENSUITE
-  • Commandes et événements : publiés quelques secondes après chaque changement en jeu (journal du chat).
+  • Commandes et événements : publiés quelques secondes après chaque changement en jeu (bande de couleurs).
   • Recensement : mis à jour à chaque /reload ou déconnexion (le même message est modifié).
   • À chaque /reload ou déconnexion, GBM Manager rattrape aussi tout ce qui aurait été manqué.
 

@@ -1,4 +1,4 @@
-GuildByMorricette (GBM) Manager 1.0.2 (application Windows)
+GuildByMorricette (GBM) Manager 1.0.3 (application Windows)
 ===========================================================
 
 Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
@@ -33,9 +33,8 @@ Ce qu'il faut
 
 Utilisation
   1. Extraire le zip, puis lancer GBM_Manager.exe (pas depuis l'interieur du zip).
-  2. Onglet Reglages : fichier de sauvegarde et journal du chat (trouves tout seuls en general) :
+  2. Onglet Reglages : fichier de sauvegarde (trouve tout seul en general) :
        <dossier du jeu>\_forever_\WTF\Account\<COMPTE>\SavedVariables\GuildeForever.lua
-       <dossier du jeu>\_forever_\Logs\WoWChatLog.txt
   3. Coller la cle du bot, l'identifiant du serveur, et l'identifiant de chaque salon voulu
      (laisser vide un outil qu'on n'utilise pas). Raid-Helper : cle API et salon des evenements.
   4. « Enregistrer », puis « Tester ».
@@ -44,10 +43,11 @@ Utilisation
   6. Laisser l'application ouverte pendant que vous jouez.
 
 Comment ca marche
-  Un addon n'a pas acces a Internet. L'addon s'envoie a lui-meme des chuchotements invisibles que le jeu
-  ecrit dans le journal du chat (/chatlog) : l'application les lit en direct (commandes, evenements).
+  Un addon n'a pas acces a Internet. Sur le PC du relais, l'addon affiche une fine bande de couleurs en haut a
+  gauche de l'ecran du jeu quand il y a quelque chose a envoyer : l'application la lit a l'ecran, une dizaine de
+  fois par seconde (commandes, evenements). Jouer en mode fenetre ou plein ecran fenetre, sans fenetre sur ce coin.
   Le fichier de sauvegarde, ecrit a la deconnexion ou au /reload, sert au recensement et a rattraper ce qui
-  aurait ete manque (application fermee, journal du chat coupe).
+  aurait ete manque (application fermee, coin de l'ecran couvert).
 
 Bon a savoir
   - Rapprochement des pseudos : le pseudo donne par le joueur (/mg discord Pseudo) est compare au nom
