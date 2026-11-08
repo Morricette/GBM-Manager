@@ -20,7 +20,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.0.4"
+VERSION = "1.0.5"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -347,7 +347,7 @@ def fenetre():
     s5 = section("Raid-Helper", 4)
     champ(s5, 0, "Clé API (/apikey) :", "cle_rh", cache=True)
     champ(s5, 1, "ID du salon des événements :", "salon_rh", aide_txt="vide = pas de Raid-Helper")
-    champ(s5, 2, "Modèle (facultatif) :", "modele_rh", aide_txt="numéro du modèle Raid-Helper")
+    champ(s5, 2, "Modèle (facultatif) :", "modele_rh", aide_txt="vide = WoW: Forever (47)")
     champ(s5, 3, "Organisateur (facultatif) :", "organisateur", aide_txt="ID Discord ; vide = propriétaire du serveur")
 
     boutons = ttk.Frame(t_reg)

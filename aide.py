@@ -38,7 +38,10 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. Sur le PC du rel
      et n'a pas de commandes de points ni d'avertissements. Salon des événements privé : lui donner le droit d'y écrire.
   2. Un administrateur tape /apikey dans Discord et choisit la commande dans la liste : la CLÉ API du serveur
      s'affiche. Elle est secrète.
-  3. Modèle (facultatif) : le numéro du modèle d'événement Raid-Helper à utiliser (sinon celui par défaut).
+  3. Modèle (facultatif) : vide = le modèle « WoW: Forever » de Raid-Helper (n° 47), qui affiche la classe et la
+     spécialisation de chaque joueur (Tank, Melee, Ranged, Healer). Un autre numéro : un autre modèle.
+  4. Pour que Raid-Helper crée aussi l'événement Discord du serveur : lui donner le droit « Créer des événements »
+     (sinon il le signale dans un message, sans gêner le reste).
 
 ÉTAPE 3 — DANS LE JEU (chef de guilde ou officier)
   1. Addon GuildByMorricette 1.16.0 ou plus.

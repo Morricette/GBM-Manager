@@ -11,7 +11,8 @@ import re
 import time
 
 import recensement_core as core
-from raidhelper import RaidHelper, ErreurRaidHelper, choisir_classe, trouver_inscription
+from raidhelper import (RaidHelper, ErreurRaidHelper, MODELE_FOREVER, choisir_classe, classe_forever, modele_forever,
+                        trouver_inscription)
 from recensement_discord import Discord, ErreurDiscord
 
 MOTIF = re.compile(r"GBM1~(\w)~(\w+)~(\d+)/(\d+)~(.*)$")
@@ -258,8 +259,7 @@ class Relais:
         type_txt = {"raid": "Raid", "donjon": "Donjon", "jcj": "JcJ"}.get(e.get("kind"), "Raid")
         corps = {"title": titre, "date": str(int(e["when"])), "time": str(int(e["when"])),
                  "description": (desc + "\n\n" if desc else "") + "%s · %d joueurs · préparé avec GuildByMorricette" % (type_txt, e.get("size", 40))}
-        if self.cfg.get("modele_rh"):
-            corps["templateId"] = str(self.cfg["modele_rh"])
+        corps["templateId"] = str(self.cfg.get("modele_rh") or MODELE_FOREVER)   # par defaut : WoW: Forever
         corps["leaderId"] = self.organisateur(e)    # obligatoire pour Raid-Helper
         rh = self.rh()
         if not r or not r.get("rh"):
@@ -294,7 +294,10 @@ class Relais:
         classes = (rh.evenement(r["rh"]).get("classes") or [])
         for s in sorted(nouveaux, key=lambda x: x.get("slot", 0)):
             uid = self.id_pseudo(s.get("discord")) if s.get("discord") else self.id_discord(s["name"])
-            cl, sp = choisir_classe(classes, s.get("class"), s.get("role"), s.get("spec"))
+            if modele_forever(classes):
+                cl, sp = classe_forever(s.get("class"), s.get("role"), s.get("tree"))
+            else:
+                cl, sp = choisir_classe(classes, s.get("class"), s.get("role"), s.get("spec"))
             corps = {"name": s["name"], "notify": False}
             if uid:
                 corps["userId"] = uid

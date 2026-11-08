@@ -76,6 +76,50 @@ class RaidHelper:
                 raise
 
 
+# --- Modele "WoW: Forever" de Raid-Helper (numero 47) -------------------------------------------------------------
+# Lu dans le tableau de bord de Raid-Helper (novembre 2026) : categories Tank, Melee, Ranged, Healer, et dans
+# chacune des specialisations en anglais ("Protection1" : paladin, "Holy1" : paladin, "Restoration1" : chaman).
+MODELE_FOREVER = "47"
+_TANK = {"Warrior": "Protection", "Paladin": "Protection1", "Druid": "Guardian", "Shaman": "Enhancement"}
+_SOINS = {"Priest": {1: "Discipline", None: "Holy"}, "Paladin": {None: "Holy1"}, "Druid": {None: "Restoration"},
+          "Shaman": {None: "Restoration1"}}
+_DPS = {
+    "Warrior": {1: ("Melee", "Arms"), None: ("Melee", "Fury")},
+    "Paladin": {None: ("Melee", "Retribution")},
+    "Rogue": {1: ("Melee", "Assassination"), 3: ("Melee", "Subtlety"), None: ("Melee", "Combat")},
+    "Hunter": {1: ("Ranged", "Beastmastery"), 3: ("Ranged", "Survival"), None: ("Ranged", "Marksmanship")},
+    "Mage": {1: ("Ranged", "Arcane"), 2: ("Ranged", "Fire"), None: ("Ranged", "Frost")},
+    "Warlock": {2: ("Ranged", "Demonology"), 3: ("Ranged", "Destruction"), None: ("Ranged", "Affliction")},
+    "Priest": {1: ("Ranged", "Smite"), 2: ("Ranged", "Smite"), None: ("Ranged", "Shadow")},
+    "Shaman": {2: ("Melee", "Enhancement"), None: ("Ranged", "Elemental")},
+    "Druid": {2: ("Melee", "Feral"), None: ("Ranged", "Balance")},
+}
+# arbre de talents principal -> role, si le joueur n'a pas choisi le sien (ordre des arbres du jeu)
+_ROLE_ARBRE = {("Warrior", 3): "T", ("Paladin", 2): "T", ("Paladin", 1): "H", ("Priest", 1): "H", ("Priest", 2): "H",
+               ("Druid", 3): "H", ("Shaman", 3): "H"}
+
+
+def modele_forever(classes):
+    noms = {_nom(c) for c in classes or []}
+    return {"Tank", "Melee", "Ranged", "Healer"} <= noms
+
+
+def classe_forever(classe, role, arbre):
+    """(className, specName) du modele WoW: Forever, d'apres la classe (anglais), le role T/H/D et l'arbre 1-3."""
+    if not classe:
+        return {"T": ("Tank", None), "H": ("Healer", None)}.get(role, ("Melee", None))
+    role = role or _ROLE_ARBRE.get((classe, arbre), "D")
+    if role == "T" and classe in _TANK:
+        return "Tank", _TANK[classe]
+    if role == "H" and classe in _SOINS:
+        t = _SOINS[classe]
+        return "Healer", t.get(arbre, t[None])
+    t = _DPS.get(classe)
+    if not t:
+        return "Melee", None
+    return t.get(arbre, t[None])
+
+
 # --- Choix de la classe et de la specialisation dans le modele de l'evenement ------------------------------------
 SPECS_ROLE = {
     "T": ("protection", "guardian", "feral", "tank", "bear"),
