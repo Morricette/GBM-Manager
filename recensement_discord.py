@@ -69,6 +69,10 @@ class Discord:
     def serveur(self, id_serveur):
         return self._appel("GET", "/guilds/%s" % id_serveur)
 
+    def roles(self, id_serveur):
+        """Roles du serveur : liste de {id, name, mentionable, ...}."""
+        return self._appel("GET", "/guilds/%s/roles" % id_serveur) or []
+
     def membres(self, id_serveur):
         """Tous les membres du serveur (par pages de 1000)."""
         tous, apres = [], "0"
@@ -80,9 +84,10 @@ class Discord:
             apres = page[-1]["user"]["id"]
 
     # --- ecriture ----------------------------------------------------------------------------------------
-    def message(self, id_salon, contenu="", embed=None, mentions=None):
-        """Message simple (texte et/ou embed), avec mentions autorisees ; rend son identifiant."""
-        corps = {"content": contenu or "", "allowed_mentions": {"parse": [], "users": list(mentions or [])}}
+    def message(self, id_salon, contenu="", embed=None, mentions=None, roles=None):
+        """Message simple (texte et/ou embed), avec mentions autorisees (membres, roles) ; rend son identifiant."""
+        corps = {"content": contenu or "", "allowed_mentions": {"parse": [], "users": list(mentions or []),
+                                                               "roles": list(roles or [])}}
         if embed:
             corps["embeds"] = [embed]
         return self._appel("POST", "/channels/%s/messages" % id_salon, corps)["id"]

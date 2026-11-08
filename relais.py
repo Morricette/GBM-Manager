@@ -11,9 +11,26 @@ import re
 import time
 
 import recensement_core as core
-from raidhelper import (RaidHelper, ErreurRaidHelper, MODELE_FOREVER, choisir_classe, classe_forever, modele_forever,
-                        trouver_inscription)
+from raidhelper import (RaidHelper, ErreurRaidHelper, MODELE_FOREVER, besoins, choisir_classe, classe_forever,
+                        modele_forever, role_de, trouver_inscription)
 from recensement_discord import Discord, ErreurDiscord
+
+# Metier (nom du jeu, francais ou anglais) -> role Discord des artisans (version 1.1.0). Le role est cherche par son
+# nom sur le serveur : s'il n'existe pas, pas de mention.
+ROLES_METIERS = {
+    "alchimie": "Alchimiste", "alchemy": "Alchimiste",
+    "forge": "Forgeron", "blacksmithing": "Forgeron",
+    "enchantement": "Enchanteur", "enchanting": "Enchanteur",
+    "ingenierie": "Ingénieur", "engineering": "Ingénieur",
+    "travail du cuir": "Travailleur du cuir", "leatherworking": "Travailleur du cuir",
+    "couture": "Tailleur", "tailoring": "Tailleur",
+    "minage": "Mineur", "mining": "Mineur",
+    "cuisine": "Cuisinier", "cooking": "Cuisinier",
+    "secourisme": "Secouriste", "first aid": "Secouriste",
+}
+ROLES_METIERS = {core.normaliser(k): v for k, v in ROLES_METIERS.items()}   # memes regles que les noms recus
+# Role T / H / D -> role Discord appele quand il en manque dans la composition d'un evenement
+ROLES_COMBAT = {"T": "Tank", "H": "Soigneur", "D": "Dégâts"}
 
 MOTIF = re.compile(r"GBM1~(\w)~(\w+)~(\d+)/(\d+)~(.*)$")
 ETATS = {
@@ -138,6 +155,24 @@ class Relais:
         d = idx.get(core.normaliser(pseudo))
         return d["id"] if d else None
 
+    def id_role(self, nom):
+        """Identifiant d'un role du serveur d'apres son nom (sans majuscules ni accents), ou None."""
+        if not nom or not self.cfg.get("serveur"):
+            return None
+        if getattr(self, "_roles", None) is None or time.time() - self._roles_t > 600:
+            self._roles = {core.normaliser(r.get("name", "")): str(r["id"]) for r in self.discord().roles(self.cfg["serveur"])}
+            self._roles_t = time.time()
+        return self._roles.get(core.normaliser(nom))
+
+    def roles_metiers(self, o):
+        """Roles Discord des metiers qui fabriquent l'objet commande (champ "profs" envoye par l'addon)."""
+        out = []
+        for p in o.get("profs") or []:
+            rid = self.id_role(ROLES_METIERS.get(core.normaliser(str(p))))
+            if rid and rid not in out:
+                out.append(rid)
+        return out
+
     def apprendre_export(self, guilde):
         """Pseudos et personnages principaux du dernier export (pour les mentions et Raid-Helper)."""
         for m in guilde.get("members", []):
@@ -170,12 +205,15 @@ class Relais:
             if etat in FERMEES:          # deja terminee quand on la decouvre : rien a publier
                 self.etat.d["commandes"][o["id"]] = {"msg": None, "etat": etat, "ferme": time.time(), "maj": o.get("updated", 0)}
                 return
-            contenu, mentions = "", []
+            contenu, mentions, roles = "", [], []
             if self.cfg.get("mentionner", True) and o.get("to"):
                 uid = self.id_discord(o["to"]) or self.id_pseudo(o.get("toDiscord"))
                 if uid:
                     contenu, mentions = "<@%s>" % uid, [uid]
-            msg = self.discord().message(salon, contenu, self._embed_commande(o), mentions)
+            elif self.cfg.get("mentionner_metiers", True) and not o.get("to"):
+                roles = self.roles_metiers(o)          # commande pour tous les artisans : on appelle le metier
+                contenu = " ".join("<@&%s>" % r for r in roles)
+            msg = self.discord().message(salon, contenu, self._embed_commande(o), mentions, roles)
             self.etat.d["commandes"][o["id"]] = {"msg": msg, "etat": etat, "taker": o.get("taker"), "maj": o.get("updated", 0),
                                                  "cree": o["created"] if (o.get("created") or 0) > 1e9 else time.time()}
             self.log("Commande publiée : %d × %s (%s)." % (o.get("qty", 1), o.get("itemName", "?"), o.get("who", "?")))
@@ -236,6 +274,11 @@ class Relais:
             return
         r = self.etat.d["raids"].get(e["id"])
         if not e.get("published", True) or e.get("removed"):
+            if r and r.get("appel"):
+                try:
+                    self.discord().effacer(self.cfg["salon_rh"], r["appel"])
+                except ErreurDiscord:
+                    pass
             if r and r.get("rh"):
                 self.rh().supprimer(r["rh"])
                 self.log("Événement Raid-Helper supprimé (n° %s)." % r["rh"])
@@ -279,7 +322,50 @@ class Relais:
             r["sig"] = sig
             self.log("Événement Raid-Helper modifié : %s." % corps["title"])
         self._inscriptions(e, r)
+        try:
+            self._appel_roles(e, r, titre)
+        except ErreurDiscord as err:                     # le bot ne peut pas ecrire dans le salon : on le signale
+            self.log("⚠ Appel des rôles manquants impossible : %s" % err)
         self.etat.sauver()
+
+    def manques(self, e):
+        """{T: n, H: n, D: n} : places de tank, soigneur et degats encore libres dans la composition de l'evenement."""
+        taille = int(e.get("size") or 40)
+        compte = {"T": 0, "H": 0, "D": 0}
+        for s in e.get("slots") or []:
+            if isinstance(s, dict) and s.get("name"):
+                compte[role_de(s.get("class"), s.get("role"), s.get("tree"))] += 1
+        tanks, soins = besoins(taille)
+        out = {"T": max(0, tanks - compte["T"]), "H": max(0, soins - compte["H"])}
+        out["D"] = max(0, taille - max(tanks, compte["T"]) - max(soins, compte["H"]) - compte["D"])
+        return {k: n for k, n in out.items() if n > 0}
+
+    def _appel_roles(self, e, r, titre):
+        """Message du bot sous l'evenement : "Il manque 1 @Tank, 2 @Soigneur". Les roles ne sont mentionnes (notifies)
+        qu'a la premiere publication ; ensuite le message est seulement corrige, puis efface quand tout est complet."""
+        if not self.cfg.get("mentionner_roles", True):
+            return
+        m = self.manques(e)
+        salon, ancien = self.cfg["salon_rh"], r.get("appel")
+        if not m:
+            if ancien:
+                self.discord().effacer(salon, ancien)
+                r.pop("appel", None)
+                r.pop("appel_txt", None)
+                self.log("« %s » : composition complète, appel des rôles retiré." % titre)
+            return
+        ids = {k: self.id_role(ROLES_COMBAT[k]) for k in m}
+        morceaux = ["%d %s" % (n, ("<@&%s>" % ids[k]) if ids[k] else ROLES_COMBAT[k]) for k, n in m.items()]
+        texte = "🔔 **%s** : il manque encore %s. Inscrivez-vous ci-dessus !" % (titre, ", ".join(morceaux))
+        if ancien:
+            if r.get("appel_txt") != texte:
+                self.discord().changer(salon, ancien, contenu=texte)
+                r["appel_txt"] = texte
+            return
+        roles = [i for i in ids.values() if i]
+        r["appel"] = self.discord().message(salon, texte, roles=roles)
+        r["appel_txt"] = texte
+        self.log("« %s » : appel des rôles manquants (%s)." % (titre, ", ".join("%d %s" % (n, ROLES_COMBAT[k]) for k, n in m.items())))
 
     def _inscriptions(self, e, r):
         rh = self.rh()

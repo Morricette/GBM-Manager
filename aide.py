@@ -12,8 +12,8 @@ TEXTE = """GUILDBYMORRICETTE (GBM) MANAGER — GUIDE
 
 GBM Manager relie l'addon GuildByMorricette au serveur Discord de la guilde. Il sert au chef de guilde et aux officiers, sur le PC où ils jouent. Trois outils :
   • Recensement : roster de la guilde comparé aux membres du Discord, message tenu à jour dans un salon des officiers (+ fichier CSV).
-  • Commandes : les commandes aux artisans apparaissent dans un salon Discord en quelques secondes, avec mention de l'artisan visé ; les commandes terminées sont effacées après un délai.
-  • Raid-Helper : chaque événement publié dans l'addon devient un événement Raid-Helper, joueurs déjà inscrits ; les places libres restent ouvertes aux inscriptions sur Discord.
+  • Commandes : les commandes aux artisans apparaissent dans un salon Discord en quelques secondes, avec mention de l'artisan visé, ou du rôle du métier (@Forgeron…) pour une commande à tous ; les commandes terminées sont effacées après un délai.
+  • Raid-Helper : chaque événement publié dans l'addon devient un événement Raid-Helper, joueurs déjà inscrits ; les places libres restent ouvertes aux inscriptions sur Discord, et le bot appelle les rôles qui manquent (@Tank, @Soigneur, @Dégâts).
 
 Nouvelles versions : page GitHub de GBM Manager (bouton plus bas), fichier GBM_Manager.exe.
 
@@ -55,9 +55,13 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. Sur le PC du rel
      <jeu>\\_forever_\\WTF\\Account\\<COMPTE>\\SavedVariables\\GuildeForever.lua
   2. Coller la clé du bot et l'identifiant du serveur.
   3. Coller l'identifiant de chaque salon voulu (laisser vide un outil qu'on n'utilise pas).
-  4. Commandes : délai avant d'effacer une commande reçue ou annulée, mention de l'artisan visé.
+  4. Commandes : délai avant d'effacer une commande reçue ou annulée, mention de l'artisan visé, mention du rôle
+     du métier pour une commande à tous (rôles Alchimiste, Forgeron, Enchanteur, Ingénieur, Travailleur du cuir,
+     Tailleur, Mineur, Cuisinier, Secouriste sur le serveur ; addon 1.17.0 ou plus).
   5. Raid-Helper : clé API, identifiant du salon des événements, modèle et organisateur (facultatifs ; sans
-     organisateur reconnu, le propriétaire du serveur est noté organisateur).
+     organisateur reconnu, le propriétaire du serveur est noté organisateur). Case « Appeler les rôles qui
+     manquent » : rôles Tank, Soigneur, Dégâts du serveur ; le bot doit pouvoir écrire dans le salon des événements.
+     Repères : 1 tank et 1 soigneur en donjon ; sinon 1 tank pour 10 joueurs et 1 soigneur pour 4.
   6. « Enregistrer », puis « Tester ». Laisser GBM Manager ouvert pendant que vous jouez.
   En jeu, /mg relais test affiche un message d'essai dans la bande de couleurs : il doit apparaître dans l'onglet Journal.
 

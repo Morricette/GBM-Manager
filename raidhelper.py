@@ -99,6 +99,21 @@ _ROLE_ARBRE = {("Warrior", 3): "T", ("Paladin", 2): "T", ("Paladin", 1): "H", ("
                ("Druid", 3): "H", ("Shaman", 3): "H"}
 
 
+def role_de(classe, role, arbre):
+    """Role T (tank), H (soins) ou D (degats) d'un joueur : son choix, sinon son arbre de talents principal."""
+    if role in ("T", "H", "D"):
+        return role
+    return _ROLE_ARBRE.get((classe, arbre), "D")
+
+
+def besoins(taille):
+    """(tanks, soigneurs) attendus selon la taille : 1 et 1 en donjon, puis 1 tank pour 10 et 1 soigneur pour 4."""
+    taille = int(taille or 0)
+    if taille <= 5:
+        return 1, 1
+    return max(2, taille // 10), max(2, taille // 4)
+
+
 def modele_forever(classes):
     noms = {_nom(c) for c in classes or []}
     return {"Tank", "Melee", "Ranged", "Healer"} <= noms

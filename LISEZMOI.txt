@@ -1,11 +1,11 @@
-GuildByMorricette (GBM) Manager 1.0.5 (application Windows)
+GuildByMorricette (GBM) Manager 1.1.0 (application Windows)
 ===========================================================
 
 Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
 Licence GPL-2.0-or-later, comme l'addon. Le guide complet est dans l'onglet « Aide » de l'application.
 Telechargement et nouvelles versions : https://github.com/Morricette/GBM-Manager/releases/latest
 
-GBM Manager relie l'addon GuildByMorricette (1.16.0 ou plus) au serveur Discord de la guilde.
+GBM Manager relie l'addon GuildByMorricette (1.16.0 ou plus ; 1.17.0 pour les roles des metiers) au serveur Discord de la guilde.
 Il sert au chef de guilde et aux officiers, sur le PC ou ils jouent. Trois outils, chacun facultatif :
 
 1. Recensement
@@ -16,13 +16,19 @@ Il sert au chef de guilde et aux officiers, sur le PC ou ils jouent. Trois outil
 
 2. Commandes aux artisans
    Chaque commande passee dans l'addon apparait dans un salon Discord quelques secondes apres, avec
-   mention de l'artisan vise (s'il a donne son pseudo Discord). Le message change d'icone quand la commande
-   est prise, recue ou annulee, puis il est efface apres le delai choisi (24 heures par defaut).
+   mention de l'artisan vise (s'il a donne son pseudo Discord). Une commande pour tous les artisans mentionne
+   le role du metier (@Forgeron, @Alchimiste...) s'il existe sur le serveur (addon 1.17.0 ou plus).
+   Le message change d'icone quand la commande est prise, recue ou annulee, puis il est efface apres le delai
+   choisi (24 heures par defaut).
 
 3. Raid-Helper
    Chaque evenement publie dans l'onglet Composition de raid de l'addon devient un evenement Raid-Helper, avec les
    joueurs deja places inscrits d'avance. Les places libres restent ouvertes : les autres s'inscrivent sur
    Discord comme d'habitude. Un evenement retire dans l'addon est supprime de Raid-Helper.
+   S'il manque des tanks, des soigneurs ou des degats dans la composition, le bot ecrit sous l'evenement
+   « il manque 1 @Tank, 2 @Soigneur » (roles Tank, Soigneur, Degats du serveur, s'ils existent). Seule la
+   premiere publication notifie ; le message est ensuite corrige, puis efface quand la composition est complete.
+   Reperes : 1 tank et 1 soigneur en donjon (5) ; sinon 1 tank pour 10 joueurs et 1 soigneur pour 4.
 
 Ce qu'il faut
   - Le chef de guilde ou un officier qui joue sur ce PC, avec « Relais Discord sur ce PC » coche
@@ -50,6 +56,10 @@ Comment ca marche
   aurait ete manque (application fermee, coin de l'ecran couvert).
 
 Bon a savoir
+  - Roles mentionnes (1.1.0) : roles cherches par leur nom (sans tenir compte des majuscules ni des accents) :
+    Tank, Soigneur, Degats ; Alchimiste, Forgeron, Enchanteur, Ingenieur, Travailleur du cuir, Tailleur, Mineur,
+    Cuisinier, Secouriste. Le role doit etre « mentionnable par tout le monde », et le bot doit pouvoir ecrire
+    dans le salon des evenements. Chaque appel se coupe dans les Reglages.
   - Rapprochement des pseudos : le pseudo donne par le joueur (/mg discord Pseudo) est compare au nom
     d'utilisateur, au nom affiche et au surnom sur le serveur, sans tenir compte des majuscules, des accents,
     des espaces, des points ni des tirets. Les bots du serveur ne sont pas comptes.

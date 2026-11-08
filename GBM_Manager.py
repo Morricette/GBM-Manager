@@ -20,7 +20,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.0.5"
+VERSION = "1.1.0"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -86,6 +86,8 @@ def charger_config():
     c.setdefault("salon_commandes", "")
     c.setdefault("delai_heures", 24)
     c.setdefault("mentionner", True)
+    c.setdefault("mentionner_metiers", True)   # 1.1.0 : commande pour tous -> role du metier
+    c.setdefault("mentionner_roles", True)     # 1.1.0 : evenement -> roles Tank / Soigneur / Degats manquants
     c.setdefault("cle_rh", "")
     c.setdefault("salon_rh", "")
     c.setdefault("modele_rh", "")
@@ -306,6 +308,8 @@ def fenetre():
     v["cle"] = tk.StringVar(value=montrer(cfg["cle"]))
     v["cle_rh"] = tk.StringVar(value=montrer(cfg["cle_rh"]))
     v_mention = tk.BooleanVar(value=bool(cfg.get("mentionner", True)))
+    v_metiers = tk.BooleanVar(value=bool(cfg.get("mentionner_metiers", True)))
+    v_roles = tk.BooleanVar(value=bool(cfg.get("mentionner_roles", True)))
     v_surv = tk.BooleanVar(value=bool(cfg.get("surveiller", True)))
     t_reg.columnconfigure(0, weight=1)
 
@@ -344,11 +348,13 @@ def fenetre():
     champ(s4, 0, "ID du salon des commandes :", "salon_commandes", aide_txt="vide = pas de commandes")
     champ(s4, 1, "Effacer après (heures) :", "delai_heures", aide_txt="commandes reçues ou annulées")
     ttk.Checkbutton(s4, text="Mentionner l'artisan visé (s'il a donné son pseudo Discord)", variable=v_mention).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
+    ttk.Checkbutton(s4, text="Commande pour tous : mentionner le rôle du métier (@Forgeron, @Alchimiste…)", variable=v_metiers).grid(row=3, column=0, columnspan=3, sticky="w", padx=4)
     s5 = section("Raid-Helper", 4)
     champ(s5, 0, "Clé API (/apikey) :", "cle_rh", cache=True)
     champ(s5, 1, "ID du salon des événements :", "salon_rh", aide_txt="vide = pas de Raid-Helper")
     champ(s5, 2, "Modèle (facultatif) :", "modele_rh", aide_txt="vide = WoW: Forever (47)")
     champ(s5, 3, "Organisateur (facultatif) :", "organisateur", aide_txt="ID Discord ; vide = propriétaire du serveur")
+    ttk.Checkbutton(s5, text="Appeler les rôles qui manquent (@Tank, @Soigneur, @Dégâts) sous l'événement", variable=v_roles).grid(row=4, column=0, columnspan=3, sticky="w", padx=4)
 
     boutons = ttk.Frame(t_reg)
     boutons.grid(row=5, column=0, sticky="w", pady=8)
@@ -365,6 +371,8 @@ def fenetre():
         cfg["cle"] = cacher(v["cle"].get().strip())
         cfg["cle_rh"] = cacher(v["cle_rh"].get().strip())
         cfg["mentionner"] = bool(v_mention.get())
+        cfg["mentionner_metiers"] = bool(v_metiers.get())
+        cfg["mentionner_roles"] = bool(v_roles.get())
         cfg["surveiller"] = bool(v_surv.get())
         sauver_config(cfg)
         moteur.relais.membres = None   # liste des membres relue avec les nouveaux reglages
