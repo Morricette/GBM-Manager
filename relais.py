@@ -237,17 +237,26 @@ class Relais:
         if not e.get("published", True) or e.get("removed"):
             if r and r.get("rh"):
                 self.rh().supprimer(r["rh"])
-                self.log("Événement Raid-Helper supprimé.")
+                self.log("Événement Raid-Helper supprimé (n° %s)." % r["rh"])
+            else:
+                self.log("Événement retiré dans l'addon : aucun événement Raid-Helper connu pour lui.")
             self.etat.d["raids"].pop(e["id"], None)
             self.etat.sauver()
             return
+        titre = e.get("title") or "Événement"
+        if e.get("place"):
+            titre = "%s — %s" % (e["place"], titre)
         if not e.get("when"):
-            self.log("Événement « %s » sans date ou heure valide (JJ/MM et HH:MM) : pas publié sur Raid-Helper." % e.get("title"))
+            self.log("Événement « %s » sans date ou heure valide (JJ/MM et HH:MM) : pas publié sur Raid-Helper." % titre)
             return
-        sig = json.dumps([e.get("title"), e.get("desc"), e.get("when"), e.get("size")], ensure_ascii=False)
+        if e["when"] < time.time() and not (r and r.get("rh")):
+            self.log("Événement « %s » : la date et l'heure sont déjà passées, pas publié sur Raid-Helper "
+                     "(il serait clôturé). Corrigez-les dans l'addon, puis Enregistrer." % titre)
+            return
+        sig = json.dumps([titre, e.get("desc"), e.get("when"), e.get("size"), e.get("kind")], ensure_ascii=False)
         desc = (e.get("desc") or "").strip()
         type_txt = {"raid": "Raid", "donjon": "Donjon", "jcj": "JcJ"}.get(e.get("kind"), "Raid")
-        corps = {"title": e.get("title") or "Événement", "date": str(int(e["when"])), "time": str(int(e["when"])),
+        corps = {"title": titre, "date": str(int(e["when"])), "time": str(int(e["when"])),
                  "description": (desc + "\n\n" if desc else "") + "%s · %d joueurs · préparé avec GuildByMorricette" % (type_txt, e.get("size", 40))}
         if self.cfg.get("modele_rh"):
             corps["templateId"] = str(self.cfg["modele_rh"])
@@ -258,10 +267,13 @@ class Relais:
                 ev = rh.creer(self.cfg["serveur"], self.cfg["salon_rh"], dict(corps, advancedSettings={"limit": int(e.get("size", 40))}))
             except ErreurRaidHelper:
                 ev = rh.creer(self.cfg["serveur"], self.cfg["salon_rh"], corps)   # sans la limite de places
+            if not ev.get("id"):
+                self.log("⚠ Raid-Helper a répondu sans numéro d'événement : %s" % json.dumps(ev, ensure_ascii=False)[:300])
+                return
             r = {"rh": str(ev.get("id")), "sig": sig, "inscrits": {}}
             self.etat.d["raids"][e["id"]] = r
             self.etat.sauver()
-            self.log("Événement Raid-Helper créé : %s." % corps["title"])
+            self.log("Événement Raid-Helper créé : %s (n° %s)." % (corps["title"], r["rh"]))
         elif r.get("sig") != sig:
             ev = rh.modifier(r["rh"], corps)
             r["sig"] = sig
@@ -296,7 +308,11 @@ class Relais:
                 ev = rh.inscrire(r["rh"], corps)
             except ErreurRaidHelper:
                 corps.pop("specName", None)                              # modele sans specialisations
-                ev = rh.inscrire(r["rh"], corps)
+                try:
+                    ev = rh.inscrire(r["rh"], corps)
+                except ErreurRaidHelper as err:                          # un joueur refuse n'empeche pas les autres
+                    self.log("⚠ Raid-Helper : %s pas inscrit (%s)." % (s["name"], err))
+                    continue
             inscrits[s["name"]] = trouver_inscription(ev, s["name"], uid) or "?"
             self.log("Raid-Helper : %s inscrit%s." % (s["name"], "" if uid else " (sans compte Discord)"))
 
