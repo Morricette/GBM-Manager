@@ -6,6 +6,7 @@ un salon des officiers), commandes aux artisans publiees sur Discord en quelques
 l'addon envoyes a Raid-Helper avec les joueurs inscrits. Lit le fichier de sauvegarde et la bande de pixels de l'addon.
 
 Lancement :  GBM_Manager.exe            fenetre
+             GBM_Manager.exe --fond     fenetre reduite (lancement avec Windows, version 1.2.0)
              GBM_Manager.exe --demo     essai sans Discord (fausse liste de membres), affiche le message
 """
 import json
@@ -20,7 +21,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -65,6 +66,75 @@ def montrer(valeur):
         except Exception:
             return ""
     return valeur[6:] if valeur.startswith("clair:") else valeur
+
+
+# --- Lancement avec Windows (1.2.0) ------------------------------------------------------------------------------------
+CLE_RUN = r"Software\Microsoft\Windows\CurrentVersion\Run"
+NOM_RUN = "GBM Manager"
+
+
+def commande_demarrage():
+    if getattr(sys, "frozen", False):                 # GBM_Manager.exe
+        return '"%s" --fond' % sys.executable
+    return '"%s" "%s" --fond' % (sys.executable.replace("python.exe", "pythonw.exe"), os.path.abspath(__file__))
+
+
+def demarrage_actif():
+    if os.name != "nt":
+        return False
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLE_RUN) as k:
+            winreg.QueryValueEx(k, NOM_RUN)
+        return True
+    except OSError:
+        return False
+
+
+def regler_demarrage(actif):
+    """Ajoute ou retire GBM Manager des programmes lances a l'ouverture de la session Windows (compte courant)."""
+    if os.name != "nt":
+        return
+    import winreg
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLE_RUN, 0, winreg.KEY_SET_VALUE) as k:
+        if actif:
+            winreg.SetValueEx(k, NOM_RUN, 0, winreg.REG_SZ, commande_demarrage())
+        else:
+            try:
+                winreg.DeleteValue(k, NOM_RUN)
+            except OSError:
+                pass
+
+
+def deja_ouvert():
+    """Une seule copie de GBM Manager par session Windows (sinon deux copies publieraient la meme chose)."""
+    if os.name != "nt":
+        return False
+    import ctypes
+    global _VERROU
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _VERROU = k32.CreateMutexW(None, False, "Local\\GBM-Manager")
+    return ctypes.get_last_error() == 183    # ERROR_ALREADY_EXISTS : deja ouvert
+
+
+def jeu_ouvert():
+    """Le jeu tourne-t-il ? (processus dont le nom commence par "wow", comme Wow.exe ou WowClassic.exe).
+    En cas de doute (pas Windows, liste illisible), on repond oui."""
+    if os.name != "nt":
+        return True
+    try:
+        import subprocess
+        sortie = subprocess.run(["tasklist", "/fo", "csv", "/nh"], capture_output=True, text=True, timeout=10,
+                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+    except Exception:
+        return True
+    if not sortie.strip():
+        return True
+    for ligne in sortie.splitlines():
+        nom = ligne.split(",")[0].strip('"').lower()
+        if nom.startswith("wow"):
+            return True
+    return False
 
 
 def charger_config():
@@ -142,6 +212,19 @@ def mettre_a_jour(cfg, journal, membres_factices=None):
             if "404" not in str(e):
                 raise
             journal("Ancien message introuvable : nouveau message.")
+    # 1.2.0 : un autre officier a peut-etre deja publie le recensement : on reprend son message
+    try:
+        moi = str(d.moi().get("id"))
+        for m in d.messages(cfg["salon"], 100):
+            if str((m.get("author") or {}).get("id")) == moi and any(
+                    (x.get("title") or "") == emb.get("title") for x in m.get("embeds") or []):
+                d.modifier(cfg["salon"], m["id"], emb, (nom_csv, csv))
+                cfg["messages"][cle_msg] = m["id"]
+                sauver_config(cfg)
+                journal("Recensement déjà publié par un autre officier : son message est mis à jour.")
+                return res, emb, csv
+    except ErreurDiscord:
+        pass
     cfg["messages"][cle_msg] = d.envoyer(cfg["salon"], emb, (nom_csv, csv))
     sauver_config(cfg)
     journal("Message publié dans le salon.")
@@ -186,7 +269,18 @@ class Moteur:
         except Exception as e:      # hors Windows : pas de capture d'ecran
             self.etat_pixels = "indisponible (%s)" % e
             return
+        verif, ouvert = 0, True
         while self.actif:
+            # 1.2.0 : jeu ferme -> on ne lit plus l'ecran (on regarde toutes les 15 secondes s'il est lance)
+            if time.time() - verif > 15:
+                verif = time.time()
+                avant, ouvert = ouvert, jeu_ouvert()
+                if ouvert != avant:
+                    self.log("Jeu détecté : lecture de la bande de couleurs." if ouvert
+                             else "Jeu fermé : GBM Manager attend son lancement.")
+            if not ouvert:
+                time.sleep(1)
+                continue
             if self.cfg.get("salon_commandes") or self.cfg.get("cle_rh"):
                 try:
                     messages = self.pixels.tour()
@@ -242,10 +336,18 @@ class Moteur:
 
 
 # --- Fenetre ----------------------------------------------------------------------------------------------------------
-def fenetre():
+def fenetre(en_fond=False):
     import tkinter as tk
     import webbrowser
-    from tkinter import filedialog, ttk
+    from tkinter import filedialog, messagebox, ttk
+
+    if deja_ouvert():                 # 1.2.0 : une seule copie par session Windows
+        if not en_fond:
+            r = tk.Tk()
+            r.withdraw()
+            messagebox.showinfo(NOM, "GBM Manager est déjà ouvert sur ce PC (regardez dans la barre des tâches).")
+            r.destroy()
+        return
 
     premier = not os.path.exists(CONFIG)
     cfg = charger_config()
@@ -311,6 +413,7 @@ def fenetre():
     v_metiers = tk.BooleanVar(value=bool(cfg.get("mentionner_metiers", True)))
     v_roles = tk.BooleanVar(value=bool(cfg.get("mentionner_roles", True)))
     v_surv = tk.BooleanVar(value=bool(cfg.get("surveiller", True)))
+    v_demarrage = tk.BooleanVar(value=demarrage_actif())
     t_reg.columnconfigure(0, weight=1)
 
     def section(titre, ligne):
@@ -337,6 +440,8 @@ def fenetre():
     ttk.Label(s1, text="Relais en direct : GBM Manager lit la bande de couleurs en haut à gauche du jeu.\n"
                        "Jeu en fenêtré ou plein écran fenêtré, coin non couvert par une autre fenêtre.",
               foreground="#777").grid(row=1, column=1, sticky="w", padx=4)
+    ttk.Checkbutton(s1, text="Lancer GBM Manager au démarrage de Windows (fenêtre réduite ; il attend que le jeu soit lancé)",
+                    variable=v_demarrage).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
     s2 = section("Discord (bot GBM Manager)", 1)
     champ(s2, 0, "Clé du bot :", "cle", cache=True)
     champ(s2, 1, "ID du serveur :", "serveur")
@@ -375,6 +480,12 @@ def fenetre():
         cfg["mentionner_roles"] = bool(v_roles.get())
         cfg["surveiller"] = bool(v_surv.get())
         sauver_config(cfg)
+        if bool(v_demarrage.get()) != demarrage_actif():        # 1.2.0
+            try:
+                regler_demarrage(bool(v_demarrage.get()))
+                journal("Lancement au démarrage de Windows : %s." % ("activé" if v_demarrage.get() else "désactivé"))
+            except OSError as e:
+                journal("⚠ Lancement au démarrage de Windows impossible à régler : %s" % e)
         moteur.relais.membres = None   # liste des membres relue avec les nouveaux reglages
 
     def en_fond(travail):
@@ -446,6 +557,8 @@ def fenetre():
         moteur.actif = False
         root.destroy()
     root.protocol("WM_DELETE_WINDOW", fermer)
+    if en_fond:                       # 1.2.0 : lance avec Windows : fenetre reduite dans la barre des taches
+        root.iconify()
     root.mainloop()
 
 
@@ -465,4 +578,4 @@ if __name__ == "__main__":
     if len(sys.argv) >= 4 and sys.argv[1] == "--demo":
         demo(sys.argv[2], sys.argv[3])
     else:
-        fenetre()
+        fenetre(en_fond="--fond" in sys.argv[1:])

@@ -41,6 +41,25 @@ ETATS = {
 }
 FERMEES = ("done", "cancel")
 
+# 1.2.0 : plusieurs officiers peuvent faire tourner GBM Manager en meme temps (meme bot). Chaque publication porte une
+# etiquette discrete ("ref. O12" pour une commande, "ref. E7" pour un evenement) ; avant de publier, l'application
+# cherche cette etiquette dans le salon (ou dans les evenements Raid-Helper) et reprend le message qui existe deja.
+# Si deux officiers publient au meme instant, le plus ancien message est garde et l'autre est efface.
+def etiquette(genre, ident):
+    return "réf. %s%s" % (genre, ident)
+
+
+def _num(x):
+    try:
+        return int(x)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _porte(texte, etiq):
+    """L'etiquette est-elle dans le texte (sans confondre "ref. O1" et "ref. O12") ?"""
+    return re.search(re.escape(etiq) + r"(?![\w-])", texte or "") is not None
+
 
 def chemin_journal(chemin_sauvegarde):
     """<jeu>\\_forever_\\WTF\\Account\\X\\SavedVariables\\GuildeForever.lua -> <jeu>\\_forever_\\Logs\\WoWChatLog.txt"""
@@ -182,6 +201,55 @@ class Relais:
         for e in guilde.get("discordNames", []):
             self.pseudos.setdefault(e["name"], e.get("discord"))
 
+    # Doublons (1.2.0) -------------------------------------------------------------------------------------------
+    def _moi(self):
+        if not getattr(self, "_bot", None):
+            self._bot = str(self.discord().moi().get("id") or "")
+        return self._bot
+
+    @staticmethod
+    def _texte(m):
+        parts = [m.get("content") or ""]
+        for e in m.get("embeds") or []:
+            parts += [e.get("title") or "", e.get("description") or "", (e.get("footer") or {}).get("text") or ""]
+        return "\n".join(parts)
+
+    def chercher(self, salon, etiq, frais=False):
+        """Messages du bot dans le salon qui portent l'etiquette, du plus ancien au plus recent."""
+        cache = self.__dict__.setdefault("_vus", {})
+        c = cache.get(salon)
+        if frais or not c or time.time() - c[0] > 5:
+            try:
+                msgs = self.discord().messages(salon, 100)
+            except ErreurDiscord as e:
+                if not getattr(self, "_avert_hist", False):
+                    self._avert_hist = True
+                    self.log("⚠ Anti-doublons impossible : donnez au bot le droit « Lire l'historique des messages » "
+                             "dans les salons où il écrit (%s)." % e)
+                msgs = []
+            c = (time.time(), msgs)
+            cache[salon] = c
+        moi = self._moi()
+        out = [m for m in c[1] if str((m.get("author") or {}).get("id")) == moi and _porte(self._texte(m), etiq)]
+        return sorted(out, key=lambda m: _num(m.get("id")))
+
+    def garder_un(self, salon, etiq, mien):
+        """Juste apres une publication : si un autre officier a publie la meme chose au meme instant, on garde le plus
+        ancien message et on efface les autres. Rend l'identifiant du message garde."""
+        time.sleep(1.5)
+        tous = self.chercher(salon, etiq, frais=True)
+        if len(tous) <= 1:
+            return mien
+        garde = str(tous[0]["id"])
+        for m in tous[1:]:
+            try:
+                self.discord().effacer(salon, m["id"])
+            except ErreurDiscord:
+                pass
+        if garde != str(mien):
+            self.log("Doublon évité (%s) : un autre officier avait publié au même moment." % etiq)
+        return garde
+
     # Commandes ------------------------------------------------------------------------------------------------
     def _embed_commande(self, o):
         icone, texte, couleur = ETATS.get(o.get("state"), ETATS["open"])
@@ -193,7 +261,7 @@ class Relais:
             lignes.append("Note : %s" % o["note"])
         lignes.append("État : %s %s" % (icone, texte))
         return {"title": "%s %d × %s" % (icone, o.get("qty", 1), o.get("itemName", "?")), "description": "\n".join(lignes),
-                "color": couleur, "footer": {"text": "GuildByMorricette · commande aux artisans"}}
+                "color": couleur, "footer": {"text": "GuildByMorricette · commande aux artisans · %s" % etiquette("O", o.get("id"))}}
 
     def commande(self, o):
         salon = self.cfg.get("salon_commandes")
@@ -201,6 +269,14 @@ class Relais:
             return
         c = self.etat.d["commandes"].get(o["id"])
         etat = o.get("state")
+        if c is None:
+            # 1.2.0 : deja publiee par un autre officier ? on reprend son message (et on le met a jour si besoin)
+            deja = self.chercher(salon, etiquette("O", o["id"]))
+            if deja:
+                c = {"msg": str(deja[0]["id"]), "etat": None, "taker": None, "maj": 0,
+                     "cree": o["created"] if (o.get("created") or 0) > 1e9 else time.time()}
+                self.etat.d["commandes"][o["id"]] = c
+                self.log("Commande déjà publiée par un autre officier : %s (message repris)." % o.get("itemName", "?"))
         if c is None:
             if etat in FERMEES:          # deja terminee quand on la decouvre : rien a publier
                 self.etat.d["commandes"][o["id"]] = {"msg": None, "etat": etat, "ferme": time.time(), "maj": o.get("updated", 0)}
@@ -214,6 +290,7 @@ class Relais:
                 roles = self.roles_metiers(o)          # commande pour tous les artisans : on appelle le metier
                 contenu = " ".join("<@&%s>" % r for r in roles)
             msg = self.discord().message(salon, contenu, self._embed_commande(o), mentions, roles)
+            msg = self.garder_un(salon, etiquette("O", o["id"]), msg)
             self.etat.d["commandes"][o["id"]] = {"msg": msg, "etat": etat, "taker": o.get("taker"), "maj": o.get("updated", 0),
                                                  "cree": o["created"] if (o.get("created") or 0) > 1e9 else time.time()}
             self.log("Commande publiée : %d × %s (%s)." % (o.get("qty", 1), o.get("itemName", "?"), o.get("who", "?")))
@@ -273,10 +350,14 @@ class Relais:
         if not (self.cfg.get("cle_rh") and self.cfg.get("salon_rh") and self.cfg.get("serveur")) or not e.get("id"):
             return
         r = self.etat.d["raids"].get(e["id"])
+        if not (r and r.get("rh")) and self.cfg.get("cle_rh"):
+            r = self._reprendre(e) or r     # 1.2.0 : deja publie par un autre officier ?
         if not e.get("published", True) or e.get("removed"):
-            if r and r.get("appel"):
+            appels = {r["appel"]} if r and r.get("appel") else set()
+            appels |= {str(m["id"]) for m in self.chercher(self.cfg["salon_rh"], etiquette("E", e["id"]))}   # 1.2.0
+            for a in appels:
                 try:
-                    self.discord().effacer(self.cfg["salon_rh"], r["appel"])
+                    self.discord().effacer(self.cfg["salon_rh"], a)
                 except ErreurDiscord:
                     pass
             if r and r.get("rh"):
@@ -301,7 +382,8 @@ class Relais:
         desc = (e.get("desc") or "").strip()
         type_txt = {"raid": "Raid", "donjon": "Donjon", "jcj": "JcJ"}.get(e.get("kind"), "Raid")
         corps = {"title": titre, "date": str(int(e["when"])), "time": str(int(e["when"])),
-                 "description": (desc + "\n\n" if desc else "") + "%s · %d joueurs · préparé avec GuildByMorricette" % (type_txt, e.get("size", 40))}
+                 "description": (desc + "\n\n" if desc else "") + "%s · %d joueurs · préparé avec GuildByMorricette · %s"
+                 % (type_txt, e.get("size", 40), etiquette("E", e["id"]))}
         corps["templateId"] = str(self.cfg.get("modele_rh") or MODELE_FOREVER)   # par defaut : WoW: Forever
         corps["leaderId"] = self.organisateur(e)    # obligatoire pour Raid-Helper
         rh = self.rh()
@@ -317,6 +399,7 @@ class Relais:
             self.etat.d["raids"][e["id"]] = r
             self.etat.sauver()
             self.log("Événement Raid-Helper créé : %s (n° %s)." % (corps["title"], r["rh"]))
+            self._un_seul_evenement(e, titre, r)
         elif r.get("sig") != sig:
             ev = rh.modifier(r["rh"], corps)
             r["sig"] = sig
@@ -327,6 +410,57 @@ class Relais:
         except ErreurDiscord as err:                     # le bot ne peut pas ecrire dans le salon : on le signale
             self.log("⚠ Appel des rôles manquants impossible : %s" % err)
         self.etat.sauver()
+
+    def _memes_evenements(self, e, titre, frais=False):
+        """Evenements Raid-Helper deja publies pour cet evenement de l'addon (etiquette, ou meme titre, date et salon)."""
+        c = getattr(self, "_rh_liste", None)
+        if frais or not c or time.time() - c[0] > 10:
+            try:
+                c = self._rh_liste = (time.time(), self.rh().evenements(self.cfg["serveur"]))
+            except ErreurRaidHelper as err:
+                self.log("⚠ Raid-Helper : liste des événements illisible, doublons non vérifiés (%s)." % err)
+                return []
+        liste = c[1]
+        etiq, out = etiquette("E", e["id"]), []
+        for ev in liste:
+            if not isinstance(ev, dict) or not ev.get("id"):
+                continue
+            meme = _porte(ev.get("description"), etiq) or (
+                titre and ev.get("title") == titre and e.get("when") and _num(ev.get("startTime")) == int(e["when"])
+                and str(ev.get("channelId") or self.cfg["salon_rh"]) == str(self.cfg["salon_rh"]))
+            if meme:
+                out.append(ev)
+        return sorted(out, key=lambda x: _num(x.get("id")))
+
+    def _titre(self, e):
+        titre = e.get("title") or "Événement"
+        return "%s — %s" % (e["place"], titre) if e.get("place") else titre
+
+    def _reprendre(self, e):
+        """Evenement deja publie par un autre officier : on le reprend (sans le recreer)."""
+        if not e.get("id"):
+            return None
+        memes = self._memes_evenements(e, self._titre(e))
+        if not memes:
+            return None
+        r = {"rh": str(memes[0]["id"]), "sig": None, "inscrits": {}}
+        self.etat.d["raids"][e["id"]] = r
+        self.log("Événement déjà publié sur Raid-Helper par un autre officier : %s (n° %s, repris)." % (self._titre(e), r["rh"]))
+        return r
+
+    def _un_seul_evenement(self, e, titre, r):
+        """Juste apres la creation : si un autre officier a cree le meme evenement au meme instant, on garde le plus
+        ancien et on supprime les autres."""
+        time.sleep(2)
+        memes = self._memes_evenements(e, titre, frais=True)
+        if len(memes) <= 1:
+            return
+        garde = str(memes[0]["id"])
+        for ev in memes[1:]:
+            self.rh().supprimer(ev["id"])
+        if garde != r["rh"]:
+            self.log("Doublon évité : « %s » avait été créé au même moment par un autre officier (n° %s gardé)." % (titre, garde))
+            r["rh"], r["inscrits"] = garde, {}
 
     def manques(self, e):
         """{T: n, H: n, D: n} : places de tank, soigneur et degats encore libres dans la composition de l'evenement."""
@@ -347,23 +481,30 @@ class Relais:
             return
         m = self.manques(e)
         salon, ancien = self.cfg["salon_rh"], r.get("appel")
+        etiq = etiquette("E", e["id"])
+        if not ancien:                               # 1.2.0 : appel deja ecrit par un autre officier ?
+            deja = self.chercher(salon, etiq)
+            if deja:
+                ancien = r["appel"] = str(deja[0]["id"])
+                r["appel_txt"] = None
         if not m:
             if ancien:
-                self.discord().effacer(salon, ancien)
+                for x in [ancien] + [str(d["id"]) for d in self.chercher(salon, etiq) if str(d["id"]) != ancien]:
+                    self.discord().effacer(salon, x)
                 r.pop("appel", None)
                 r.pop("appel_txt", None)
                 self.log("« %s » : composition complète, appel des rôles retiré." % titre)
             return
         ids = {k: self.id_role(ROLES_COMBAT[k]) for k in m}
         morceaux = ["%d %s" % (n, ("<@&%s>" % ids[k]) if ids[k] else ROLES_COMBAT[k]) for k, n in m.items()]
-        texte = "🔔 **%s** : il manque encore %s. Inscrivez-vous ci-dessus !" % (titre, ", ".join(morceaux))
+        texte = "🔔 **%s** : il manque encore %s. Inscrivez-vous ci-dessus !\n-# %s" % (titre, ", ".join(morceaux), etiq)
         if ancien:
             if r.get("appel_txt") != texte:
                 self.discord().changer(salon, ancien, contenu=texte)
                 r["appel_txt"] = texte
             return
         roles = [i for i in ids.values() if i]
-        r["appel"] = self.discord().message(salon, texte, roles=roles)
+        r["appel"] = self.garder_un(salon, etiq, self.discord().message(salon, texte, roles=roles))
         r["appel_txt"] = texte
         self.log("« %s » : appel des rôles manquants (%s)." % (titre, ", ".join("%d %s" % (n, ROLES_COMBAT[k]) for k, n in m.items())))
 
@@ -377,9 +518,14 @@ class Relais:
         nouveaux = [s for n, s in voulus.items() if n not in inscrits]
         if not nouveaux:
             return
-        classes = (rh.evenement(r["rh"]).get("classes") or [])
+        actuel = rh.evenement(r["rh"])
+        classes = (actuel.get("classes") or [])
         for s in sorted(nouveaux, key=lambda x: x.get("slot", 0)):
             uid = self.id_pseudo(s.get("discord")) if s.get("discord") else self.id_discord(s["name"])
+            deja = trouver_inscription(actuel, s["name"], uid)   # 1.2.0 : inscrit par un autre officier
+            if deja:
+                inscrits[s["name"]] = deja
+                continue
             if modele_forever(classes):
                 cl, sp = classe_forever(s.get("class"), s.get("role"), s.get("tree"))
             else:

@@ -3,7 +3,9 @@
 Le bot a besoin de :
   - l'option "Server Members Intent" activee sur le portail des developpeurs Discord (liste des membres) ;
   - les droits "Voir le salon", "Envoyer des messages", "Integrer des liens" et "Joindre des fichiers"
-    dans le salon des officiers.
+    dans le salon des officiers ;
+  - depuis 1.2.0, "Lire l'historique des messages" dans chaque salon ou il ecrit : avant de publier, l'application
+    regarde si un autre officier n'a pas deja publie la meme chose (plusieurs officiers peuvent jouer en meme temps).
 """
 import json
 import time
@@ -57,7 +59,8 @@ class Discord:
             return "Cle du bot refusee (401) : recopiez la cle depuis le portail des developpeurs Discord."
         if code == 403:
             return ("Acces refuse (403) : le bot n'a pas les droits dans ce salon (voir, envoyer des messages, "
-                    "integrer des liens, joindre des fichiers), ou l'option Server Members Intent est desactivee.")
+                    "integrer des liens, joindre des fichiers, lire l'historique des messages), ou l'option "
+                    "Server Members Intent est desactivee.")
         if code == 404:
             return "Introuvable (404) : verifiez l'identifiant du serveur et celui du salon."
         return "Erreur Discord %s : %s" % (code, texte[:300])
@@ -72,6 +75,10 @@ class Discord:
     def roles(self, id_serveur):
         """Roles du serveur : liste de {id, name, mentionable, ...}."""
         return self._appel("GET", "/guilds/%s/roles" % id_serveur) or []
+
+    def messages(self, id_salon, limite=100):
+        """Derniers messages du salon, du plus recent au plus ancien (1.2.0, pour eviter les doublons)."""
+        return self._appel("GET", "/channels/%s/messages?limit=%d" % (id_salon, max(1, min(100, limite)))) or []
 
     def membres(self, id_serveur):
         """Tous les membres du serveur (par pages de 1000)."""

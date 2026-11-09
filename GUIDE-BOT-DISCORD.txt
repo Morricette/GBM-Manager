@@ -21,7 +21,8 @@ Il ne lit pas les messages des joueurs et ne fait rien d'autre.
    - Menu de gauche : « OAuth2 », puis « OAuth2 URL Generator ».
    - Cocher « bot » dans « Scopes ».
    - Dans « Bot Permissions », cocher : View Channels, Send Messages, Embed Links, Attach Files,
-     Manage Messages (pour effacer les commandes terminees).
+     Manage Messages (pour effacer les commandes terminees), Read Message History (depuis 1.2.0 : avant de
+     publier, l'application regarde si un autre officier l'a deja fait).
    - Copier l'adresse tout en bas, l'ouvrir dans le navigateur, choisir le serveur, « Autoriser ».
    - Bot deja invite sans « Manage Messages » ? Refaire cette etape avec la case cochee (le bot reste en
      place, ses droits sont mis a jour), ou lui donner ce droit dans le salon des commandes.
@@ -31,7 +32,8 @@ Il ne lit pas les messages des joueurs et ne fait rien d'autre.
    - Commandes : un salon (#commandes) visible de ceux qui doivent voir les commandes.
    - Evenements : le salon ou Raid-Helper publie les evenements (#evenements).
    - Dans les parametres de chaque salon, « Permissions » : ajouter le bot (ou son role) avec
-     Voir le salon, Envoyer des messages, Integrer des liens, Joindre des fichiers, Gerer les messages.
+     Voir le salon, Envoyer des messages, Integrer des liens, Joindre des fichiers, Gerer les messages,
+     Lire l'historique des messages.
 
 5. Raid-Helper (facultatif)
    - Inviter Raid-Helper depuis le site officiel https://raid-helper.xyz (bouton « Invite Bot »).

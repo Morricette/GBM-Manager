@@ -60,6 +60,13 @@ class RaidHelper:
             if "404" not in str(e):
                 raise
 
+    def evenements(self, serveur):
+        """Evenements a venir du serveur (1.2.0, pour eviter les doublons quand plusieurs officiers publient)."""
+        r = self._appel("GET", "/servers/%s/events" % serveur)
+        if isinstance(r, list):
+            return r
+        return r.get("postedEvents") or r.get("events") or []
+
     def evenement(self, id_evt):
         r = self._appel("GET", "/events/%s" % id_evt)
         return r.get("event") or r

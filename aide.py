@@ -25,7 +25,8 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. Sur le PC du rel
   2. Onglet Bot : activer « Server Members Intent », enregistrer. Décocher « Bot public ».
      « Réinitialiser le token », « Copier » : c'est la CLÉ DU BOT. Elle est secrète : collez-la seulement ici.
   3. Onglet OAuth2, générateur d'URL : cocher « bot », puis les droits :
-     Voir les salons, Envoyer des messages, Intégrer des liens, Joindre des fichiers, Gérer les messages.
+     Voir les salons, Envoyer des messages, Intégrer des liens, Joindre des fichiers, Gérer les messages,
+     Lire l'historique des messages (depuis 1.2.0 : pour éviter les doublons entre officiers).
      Ouvrir l'adresse, choisir le serveur, « Autoriser ».
   4. Créer les salons : un salon privé des officiers (recensement), un salon des commandes (visible de ceux
      qui doivent les voir), un salon des événements (Raid-Helper). Le bot doit pouvoir y écrire.
@@ -57,13 +58,24 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. Sur le PC du rel
   3. Coller l'identifiant de chaque salon voulu (laisser vide un outil qu'on n'utilise pas).
   4. Commandes : délai avant d'effacer une commande reçue ou annulée, mention de l'artisan visé, mention du rôle
      du métier pour une commande à tous (rôles Alchimiste, Forgeron, Enchanteur, Ingénieur, Travailleur du cuir,
-     Tailleur, Mineur, Cuisinier, Secouriste sur le serveur ; addon 1.17.0 ou plus).
+     Tailleur, Mineur, Cuisinier, Secouriste sur le serveur ; addon 1.16.2 ou plus).
   5. Raid-Helper : clé API, identifiant du salon des événements, modèle et organisateur (facultatifs ; sans
      organisateur reconnu, le propriétaire du serveur est noté organisateur). Case « Appeler les rôles qui
      manquent » : rôles Tank, Soigneur, Dégâts du serveur ; le bot doit pouvoir écrire dans le salon des événements.
      Repères : 1 tank et 1 soigneur en donjon ; sinon 1 tank pour 10 joueurs et 1 soigneur pour 4.
   6. « Enregistrer », puis « Tester ». Laisser GBM Manager ouvert pendant que vous jouez.
+     Case « Lancer GBM Manager au démarrage de Windows » : l'application s'ouvre toute seule, réduite dans la barre
+     des tâches, et attend que le jeu soit lancé. Plus besoin d'y penser.
   En jeu, /mg relais test affiche un message d'essai dans la bande de couleurs : il doit apparaître dans l'onglet Journal.
+
+PLUSIEURS OFFICIERS EN MÊME TEMPS (1.2.0, addon 1.16.2)
+  Chaque officier peut installer GBM Manager et cocher « Relais Discord sur ce PC » : pas de doublons.
+  • Dans le jeu, un seul relais principal affiche la bande de couleurs (rang le plus haut, puis ordre
+    alphabétique) ; les autres restent en réserve et prennent la main s'il se déconnecte. /mg relais etat.
+  • Avant de publier, GBM Manager regarde si un autre officier a déjà publié la même commande, le même
+    événement ou le même recensement (étiquette « réf. » discrète sur chaque message), et reprend ce message.
+  • Tous les officiers utilisent le même bot : chacun colle la même clé du bot (et la même clé Raid-Helper).
+    Le chef de guilde décide à qui il les donne ; si une clé fuit, il la régénère et redonne la nouvelle.
 
 CE QUI SE PASSE ENSUITE
   • Commandes et événements : publiés quelques secondes après chaque changement en jeu (bande de couleurs).

@@ -1,11 +1,11 @@
-GuildByMorricette (GBM) Manager 1.1.0 (application Windows)
+GuildByMorricette (GBM) Manager 1.2.0 (application Windows)
 ===========================================================
 
 Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
 Licence GPL-2.0-or-later, comme l'addon. Le guide complet est dans l'onglet « Aide » de l'application.
 Telechargement et nouvelles versions : https://github.com/Morricette/GBM-Manager/releases/latest
 
-GBM Manager relie l'addon GuildByMorricette (1.16.0 ou plus ; 1.17.0 pour les roles des metiers) au serveur Discord de la guilde.
+GBM Manager relie l'addon GuildByMorricette (1.16.0 ou plus ; 1.16.2 pour les roles des metiers et le relais principal) au serveur Discord de la guilde.
 Il sert au chef de guilde et aux officiers, sur le PC ou ils jouent. Trois outils, chacun facultatif :
 
 1. Recensement
@@ -17,7 +17,7 @@ Il sert au chef de guilde et aux officiers, sur le PC ou ils jouent. Trois outil
 2. Commandes aux artisans
    Chaque commande passee dans l'addon apparait dans un salon Discord quelques secondes apres, avec
    mention de l'artisan vise (s'il a donne son pseudo Discord). Une commande pour tous les artisans mentionne
-   le role du metier (@Forgeron, @Alchimiste...) s'il existe sur le serveur (addon 1.17.0 ou plus).
+   le role du metier (@Forgeron, @Alchimiste...) s'il existe sur le serveur (addon 1.16.2 ou plus).
    Le message change d'icone quand la commande est prise, recue ou annulee, puis il est efface apres le delai
    choisi (24 heures par defaut).
 
@@ -46,7 +46,8 @@ Utilisation
   4. « Enregistrer », puis « Tester ».
   5. En jeu : cocher « Relais Discord sur ce PC », taper /reload une fois, puis /mg relais test :
      la ligne de test doit apparaitre dans l'onglet Journal de l'application.
-  6. Laisser l'application ouverte pendant que vous jouez.
+  6. Laisser l'application ouverte pendant que vous jouez, ou cocher « Lancer GBM Manager au demarrage de
+     Windows » (1.2.0) : elle s'ouvre toute seule, reduite, et attend que le jeu soit lance.
 
 Comment ca marche
   Un addon n'a pas acces a Internet. Sur le PC du relais, l'addon affiche une fine bande de couleurs en haut a
@@ -64,7 +65,12 @@ Bon a savoir
     d'utilisateur, au nom affiche et au surnom sur le serveur, sans tenir compte des majuscules, des accents,
     des espaces, des points ni des tirets. Les bots du serveur ne sont pas comptes.
   - Raid-Helper : un joueur sans pseudo Discord reconnu est inscrit sous son nom de personnage, sans compte.
-  - Une seule copie de l'application par guilde suffit (celle du chef ou d'un officier).
+  - Plusieurs officiers (1.2.0, addon 1.16.2) : chacun peut faire tourner l'application, sans doublons sur
+    Discord. En jeu, un seul relais principal affiche la bande (rang le plus haut, puis ordre alphabetique) ;
+    avant de publier, l'application regarde si un autre officier l'a deja fait (etiquette « ref. » discrete
+    sur chaque message). Tous utilisent la meme cle du bot et la meme cle Raid-Helper, donnees par le chef.
+    Droit du bot a ajouter : « Lire l'historique des messages ».
+  - Une seule copie de l'application par PC (une deuxieme ouverture est refusee).
   - Windows peut afficher un avertissement au premier lancement (programme non signe) : « Informations
     complementaires », puis « Executer quand meme ».
   - Reglages et cles : dossier %APPDATA%\GBM-Manager (cles chiffrees pour votre session Windows).
