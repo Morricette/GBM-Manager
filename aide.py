@@ -64,8 +64,9 @@ Pourquoi une application ? Un addon n'a pas accès à Internet. Sur le PC du rel
      manquent » : rôles Tank, Soigneur, Dégâts du serveur ; le bot doit pouvoir écrire dans le salon des événements.
      Repères : 1 tank et 1 soigneur en donjon ; sinon 1 tank pour 10 joueurs et 1 soigneur pour 4.
   6. « Enregistrer », puis « Tester ». Laisser GBM Manager ouvert pendant que vous jouez.
-     Case « Lancer GBM Manager au démarrage de Windows » : l'application s'ouvre toute seule, réduite dans la barre
-     des tâches, et attend que le jeu soit lancé. Plus besoin d'y penser.
+     Case « Lancer GBM Manager au démarrage de Windows » : l'application s'ouvre toute seule, cachée près de
+     l'horloge (flèche ^ en bas à droite de l'écran), et attend que le jeu soit lancé. Plus besoin d'y penser.
+     La croix de la fenêtre la cache sans l'arrêter : clic droit sur son icône, « Ouvrir » ou « Quitter ».
   En jeu, /mg relais test affiche un message d'essai dans la bande de couleurs : il doit apparaître dans l'onglet Journal.
 
 PLUSIEURS OFFICIERS EN MÊME TEMPS (1.2.0, addon 1.16.2)

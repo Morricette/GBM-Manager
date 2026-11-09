@@ -6,8 +6,8 @@ cd /d "%~dp0"
 set PY=python
 where py >nul 2>nul && set PY=py
 %PY% --version || (echo Python introuvable : installez-le depuis https://www.python.org/downloads/ & pause & exit /b 1)
-%PY% -m pip install --upgrade pyinstaller || (echo Installation de PyInstaller impossible. & pause & exit /b 1)
-%PY% -m PyInstaller --noconfirm --onefile --noconsole --name GBM_Manager --icon icone.ico --add-data "icone.ico;." GBM_Manager.py || (echo La fabrication a echoue. & pause & exit /b 1)
+%PY% -m pip install --upgrade pyinstaller pystray pillow || (echo Installation de PyInstaller impossible. & pause & exit /b 1)
+%PY% -m PyInstaller --noconfirm --onefile --noconsole --name GBM_Manager --icon icone.ico --add-data "icone.ico;." --hidden-import pystray._win32 GBM_Manager.py || (echo La fabrication a echoue. & pause & exit /b 1)
 echo.
 echo Termine : le programme est dist\GBM_Manager.exe
 pause

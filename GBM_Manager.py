@@ -6,7 +6,7 @@ un salon des officiers), commandes aux artisans publiees sur Discord en quelques
 l'addon envoyes a Raid-Helper avec les joueurs inscrits. Lit le fichier de sauvegarde et la bande de pixels de l'addon.
 
 Lancement :  GBM_Manager.exe            fenetre
-             GBM_Manager.exe --fond     fenetre reduite (lancement avec Windows, version 1.2.0)
+             GBM_Manager.exe --fond     cache pres de l'horloge (lancement avec Windows, version 1.2.0)
              GBM_Manager.exe --demo     essai sans Discord (fausse liste de membres), affiche le message
 """
 import json
@@ -135,6 +135,26 @@ def jeu_ouvert():
         if nom.startswith("wow"):
             return True
     return False
+
+
+def icone_horloge(titre, ouvrir, quitter):
+    """Icone de GBM Manager dans la zone de notification, pres de l'horloge (1.2.0). Rend l'icone, ou None si la
+    bibliotheque pystray n'est pas disponible (la fenetre se reduit alors dans la barre des taches)."""
+    try:
+        import pystray
+        from PIL import Image
+    except Exception:
+        return None
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    try:
+        image = Image.open(os.path.join(base, "icone.ico"))
+    except Exception:
+        image = Image.new("RGB", (64, 64), (60, 20, 90))
+    menu = pystray.Menu(pystray.MenuItem("Ouvrir GBM Manager", lambda i, it: ouvrir(), default=True),
+                        pystray.MenuItem("Quitter GBM Manager", lambda i, it: quitter()))
+    icone = pystray.Icon("GBM-Manager", image, titre, menu)
+    threading.Thread(target=icone.run, daemon=True).start()
+    return icone
 
 
 def charger_config():
@@ -345,7 +365,8 @@ def fenetre(en_fond=False):
         if not en_fond:
             r = tk.Tk()
             r.withdraw()
-            messagebox.showinfo(NOM, "GBM Manager est déjà ouvert sur ce PC (regardez dans la barre des tâches).")
+            messagebox.showinfo(NOM, "GBM Manager est déjà ouvert sur ce PC : son icône est près de l'horloge "
+                                     "(flèche ^ en bas à droite de l'écran).")
             r.destroy()
         return
 
@@ -440,7 +461,7 @@ def fenetre(en_fond=False):
     ttk.Label(s1, text="Relais en direct : GBM Manager lit la bande de couleurs en haut à gauche du jeu.\n"
                        "Jeu en fenêtré ou plein écran fenêtré, coin non couvert par une autre fenêtre.",
               foreground="#777").grid(row=1, column=1, sticky="w", padx=4)
-    ttk.Checkbutton(s1, text="Lancer GBM Manager au démarrage de Windows (fenêtre réduite ; il attend que le jeu soit lancé)",
+    ttk.Checkbutton(s1, text="Lancer GBM Manager au démarrage de Windows (caché près de l'horloge ; il attend que le jeu soit lancé)",
                     variable=v_demarrage).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
     s2 = section("Discord (bot GBM Manager)", 1)
     champ(s2, 0, "Clé du bot :", "cle", cache=True)
@@ -552,13 +573,50 @@ def fenetre(en_fond=False):
     if not cfg["fichier"]:
         journal("Fichier de sauvegarde non trouvé : utilisez « Parcourir… » (dossier _forever_\\WTF\\Account\\<compte>\\SavedVariables).")
 
-    def fermer():
+    icone = None
+
+    def quitter():
         lire_champs()
         moteur.actif = False
+        if icone:
+            try:
+                icone.stop()
+            except Exception:
+                pass
         root.destroy()
+
+    def montrer_fenetre():
+        root.deiconify()
+        root.lift()
+        root.focus_force()
+
+    # 1.2.0 : icone pres de l'horloge. La croix de la fenetre la cache (GBM Manager continue de tourner) ;
+    # pour l'arreter : clic droit sur l'icone, « Quitter GBM Manager ».
+    icone = icone_horloge("%s %s" % (NOM, VERSION), lambda: root.after(0, montrer_fenetre), lambda: root.after(0, quitter))
+    averti = []
+
+    def fermer():
+        if not icone:
+            quitter()
+            return
+        lire_champs()
+        root.withdraw()
+        if not averti:
+            averti.append(1)
+            try:
+                icone.notify("GBM Manager continue de tourner, caché près de l'horloge. Clic droit sur son icône pour "
+                             "l'ouvrir ou le quitter.", NOM)
+            except Exception:
+                pass
     root.protocol("WM_DELETE_WINDOW", fermer)
-    if en_fond:                       # 1.2.0 : lance avec Windows : fenetre reduite dans la barre des taches
-        root.iconify()
+    if icone:
+        journal("GBM Manager est près de l'horloge : la croix de la fenêtre le cache sans l'arrêter "
+                "(clic droit sur l'icône pour l'ouvrir ou le quitter).")
+    if en_fond:                       # 1.2.0 : lance avec Windows : cache pres de l'horloge
+        if icone:
+            root.withdraw()
+        else:
+            root.iconify()
     root.mainloop()
 
 

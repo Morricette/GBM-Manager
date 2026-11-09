@@ -47,7 +47,9 @@ Utilisation
   5. En jeu : cocher « Relais Discord sur ce PC », taper /reload une fois, puis /mg relais test :
      la ligne de test doit apparaitre dans l'onglet Journal de l'application.
   6. Laisser l'application ouverte pendant que vous jouez, ou cocher « Lancer GBM Manager au demarrage de
-     Windows » (1.2.0) : elle s'ouvre toute seule, reduite, et attend que le jeu soit lance.
+     Windows » (1.2.0) : elle s'ouvre toute seule, cachee pres de l'horloge, et attend que le jeu soit lance.
+     La croix de la fenetre la cache sans l'arreter : clic droit sur son icone pres de l'horloge pour
+     l'ouvrir ou la quitter.
 
 Comment ca marche
   Un addon n'a pas acces a Internet. Sur le PC du relais, l'addon affiche une fine bande de couleurs en haut a
@@ -76,5 +78,6 @@ Bon a savoir
   - Reglages et cles : dossier %APPDATA%\GBM-Manager (cles chiffrees pour votre session Windows).
 
 Fabriquer le .exe soi-meme
-  Python 3 pour Windows, puis double-clic sur FABRIQUER-EXE.bat : le programme est cree dans le dossier dist.
+  Python 3 pour Windows, puis double-clic sur FABRIQUER-EXE.bat : le programme est cree dans le dossier dist
+  (il installe PyInstaller, et pystray et Pillow pour l'icone pres de l'horloge).
   Essai sans Discord : python GBM_Manager.py --demo <GuildeForever.lua> <membres.json>
