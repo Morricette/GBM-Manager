@@ -375,8 +375,8 @@ def fenetre(en_fond=False):
         if not en_fond:
             r = tk.Tk()
             r.withdraw()
-            messagebox.showinfo(NOM, "GBM Manager est déjà ouvert sur ce PC : son icône est près de l'horloge "
-                                     "(flèche ^ en bas à droite de l'écran).")
+            messagebox.showinfo(NOM, T("GBM Manager est déjà ouvert sur ce PC : son icône est près de l'horloge "
+                                       "(flèche ^ en bas à droite de l'écran)."))
             r.destroy()
         return
 
@@ -644,18 +644,27 @@ def fenetre(en_fond=False):
 
     # 1.2.1 : nouvelles versions (GitHub), au demarrage puis toutes les 6 heures
     def verifier_maj(manuel=False):
+        # 1.2.1 : verification a la demande -> onglet Journal et reponse dans une petite fenetre
+        def dire(msg):
+            journal(msg)
+            if manuel:
+                root.after(0, lambda: messagebox.showinfo(NOM, msg))
+        if manuel:
+            onglets.select(t_log)
+            journal(T("Recherche d'une nouvelle version sur GitHub…"))
+
         def t():
             try:
                 version, exe = maj.derniere()
             except Exception as e:
                 if manuel:
-                    journal(T("⚠ Nouvelle version : GitHub injoignable (%s).") % e)
+                    dire(T("⚠ Nouvelle version : GitHub injoignable (%s).") % e)
                 return
             if not maj.plus_recente(version, VERSION):
                 if manuel:
-                    journal(T("GBM Manager est à jour (%s).") % VERSION)
+                    dire(T("GBM Manager est à jour (%s).") % VERSION)
                 return
-            journal(T("Nouvelle version de GBM Manager disponible : %s (vous avez %s).") % (version, VERSION))
+            dire(T("Nouvelle version de GBM Manager disponible : %s (vous avez %s).") % (version, VERSION))
             if exe and maj.peut_installer() and (cfg.get("maj_auto", True) or manuel):
                 try:
                     if maj.installer(exe, journal):

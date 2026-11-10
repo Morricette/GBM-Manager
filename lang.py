@@ -133,6 +133,7 @@ EN = {
         "GBM Manager is next to the clock: the window's X hides it without stopping it (right-click the icon to open or quit it).",
     "⚠ Nouvelle version : GitHub injoignable (%s).": "⚠ New version: GitHub unreachable (%s).",
     "GBM Manager est à jour (%s).": "GBM Manager is up to date (%s).",
+    "Recherche d'une nouvelle version sur GitHub…": "Looking for a new version on GitHub…",
     "Nouvelle version de GBM Manager disponible : %s (vous avez %s).": "New GBM Manager version available: %s (you have %s).",
     "⚠ Mise à jour automatique impossible (%s). Téléchargez-la : %s": "⚠ Automatic update failed (%s). Download it: %s",
     "Téléchargement : %s": "Download: %s",
