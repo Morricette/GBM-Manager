@@ -10,6 +10,9 @@ import os
 import re
 import time
 
+import lang
+from lang import T
+
 import recensement_core as core
 from raidhelper import (RaidHelper, ErreurRaidHelper, MODELE_FOREVER, besoins, choisir_classe, classe_forever,
                         modele_forever, role_de, trouver_inscription)
@@ -31,6 +34,11 @@ ROLES_METIERS = {
 ROLES_METIERS = {core.normaliser(k): v for k, v in ROLES_METIERS.items()}   # memes regles que les noms recus
 # Role T / H / D -> role Discord appele quand il en manque dans la composition d'un evenement
 ROLES_COMBAT = {"T": "Tank", "H": "Soigneur", "D": "Dégâts"}
+# 1.3.0 : serveurs en anglais (role cherche sous son nom anglais si le nom francais n'existe pas)
+ROLES_COMBAT_EN = {"T": "Tank", "H": "Healer", "D": "DPS"}
+ROLES_METIERS_EN = {"Alchimiste": "Alchemist", "Forgeron": "Blacksmith", "Enchanteur": "Enchanter", "Ingénieur": "Engineer",
+                    "Travailleur du cuir": "Leatherworker", "Tailleur": "Tailor", "Mineur": "Miner", "Cuisinier": "Cook",
+                    "Secouriste": "First Aid"}
 
 MOTIF = re.compile(r"GBM1~(\w)~(\w+)~(\d+)/(\d+)~(.*)$")
 ETATS = {
@@ -187,7 +195,8 @@ class Relais:
         """Roles Discord des metiers qui fabriquent l'objet commande (champ "profs" envoye par l'addon)."""
         out = []
         for p in o.get("profs") or []:
-            rid = self.id_role(ROLES_METIERS.get(core.normaliser(str(p))))
+            nom = ROLES_METIERS.get(core.normaliser(str(p)))
+            rid = self.id_role(nom) or self.id_role(ROLES_METIERS_EN.get(nom))
             if rid and rid not in out:
                 out.append(rid)
         return out
@@ -224,8 +233,8 @@ class Relais:
             except ErreurDiscord as e:
                 if not getattr(self, "_avert_hist", False):
                     self._avert_hist = True
-                    self.log("⚠ Anti-doublons impossible : donnez au bot le droit « Lire l'historique des messages » "
-                             "dans les salons où il écrit (%s)." % e)
+                    self.log(T("⚠ Anti-doublons impossible : donnez au bot le droit « Lire l'historique des messages » "
+                               "dans les salons où il écrit (%s).") % e)
                 msgs = []
             c = (time.time(), msgs)
             cache[salon] = c
@@ -247,21 +256,22 @@ class Relais:
             except ErreurDiscord:
                 pass
         if garde != str(mien):
-            self.log("Doublon évité (%s) : un autre officier avait publié au même moment." % etiq)
+            self.log(T("Doublon évité (%s) : un autre officier avait publié au même moment.") % etiq)
         return garde
 
     # Commandes ------------------------------------------------------------------------------------------------
     def _embed_commande(self, o):
         icone, texte, couleur = ETATS.get(o.get("state"), ETATS["open"])
+        texte = T(texte)
         if o.get("state") == "taken":
             texte = texte % (o.get("taker") or "?")
-        lignes = ["Demandée par **%s**" % o.get("who", "?"),
-                  "Pour : **%s**" % (o["to"] if o.get("to") else "tous les artisans")]
+        lignes = [T("Demandée par **%s**") % o.get("who", "?"),
+                  T("Pour : **%s**") % (o["to"] if o.get("to") else T("tous les artisans"))]
         if o.get("note"):
-            lignes.append("Note : %s" % o["note"])
-        lignes.append("État : %s %s" % (icone, texte))
+            lignes.append(T("Note : %s") % o["note"])
+        lignes.append(T("État : %s %s") % (icone, texte))
         return {"title": "%s %d × %s" % (icone, o.get("qty", 1), o.get("itemName", "?")), "description": "\n".join(lignes),
-                "color": couleur, "footer": {"text": "GuildByMorricette · commande aux artisans · %s" % etiquette("O", o.get("id"))}}
+                "color": couleur, "footer": {"text": T("GuildByMorricette · commande aux artisans · %s") % etiquette("O", o.get("id"))}}
 
     def commande(self, o):
         salon = self.cfg.get("salon_commandes")
@@ -276,7 +286,7 @@ class Relais:
                 c = {"msg": str(deja[0]["id"]), "etat": None, "taker": None, "maj": 0,
                      "cree": o["created"] if (o.get("created") or 0) > 1e9 else time.time()}
                 self.etat.d["commandes"][o["id"]] = c
-                self.log("Commande déjà publiée par un autre officier : %s (message repris)." % o.get("itemName", "?"))
+                self.log(T("Commande déjà publiée par un autre officier : %s (message repris).") % o.get("itemName", "?"))
         if c is None:
             if etat in FERMEES:          # deja terminee quand on la decouvre : rien a publier
                 self.etat.d["commandes"][o["id"]] = {"msg": None, "etat": etat, "ferme": time.time(), "maj": o.get("updated", 0)}
@@ -293,7 +303,7 @@ class Relais:
             msg = self.garder_un(salon, etiquette("O", o["id"]), msg)
             self.etat.d["commandes"][o["id"]] = {"msg": msg, "etat": etat, "taker": o.get("taker"), "maj": o.get("updated", 0),
                                                  "cree": o["created"] if (o.get("created") or 0) > 1e9 else time.time()}
-            self.log("Commande publiée : %d × %s (%s)." % (o.get("qty", 1), o.get("itemName", "?"), o.get("who", "?")))
+            self.log(T("Commande publiée : %d × %s (%s).") % (o.get("qty", 1), o.get("itemName", "?"), o.get("who", "?")))
         else:
             if (o.get("updated") or 0) < (c.get("maj") or 0) or (etat == c.get("etat") and o.get("taker") == c.get("taker")):
                 return
@@ -302,7 +312,7 @@ class Relais:
             c.update({"etat": etat, "taker": o.get("taker"), "maj": o.get("updated", 0)})
             if etat in FERMEES:
                 c["ferme"] = time.time()
-            self.log("Commande mise à jour (%s) : %s." % (ETATS.get(etat, ("", etat))[1].replace("%s", o.get("taker") or ""), o.get("itemName", "?")))
+            self.log(T("Commande mise à jour (%s) : %s.") % (ETATS.get(etat, ("", etat))[1].replace("%s", o.get("taker") or ""), o.get("itemName", "?")))
         self.etat.sauver()
 
     def nettoyer(self):
@@ -343,7 +353,7 @@ class Relais:
                 self._proprietaire = str(self.discord().serveur(self.cfg["serveur"]).get("owner_id") or "")
             chef = self._proprietaire
             if chef and e.get("by"):
-                self.log("Raid-Helper : %s n'est pas reconnu sur Discord, le propriétaire du serveur est noté organisateur." % e["by"])
+                self.log(T("Raid-Helper : %s n'est pas reconnu sur Discord, le propriétaire du serveur est noté organisateur.") % e["by"])
         return chef
 
     def evenement(self, e):
@@ -362,27 +372,27 @@ class Relais:
                     pass
             if r and r.get("rh"):
                 self.rh().supprimer(r["rh"])
-                self.log("Événement Raid-Helper supprimé (n° %s)." % r["rh"])
+                self.log(T("Événement Raid-Helper supprimé (n° %s).") % r["rh"])
             else:
-                self.log("Événement retiré dans l'addon : aucun événement Raid-Helper connu pour lui.")
+                self.log(T("Événement retiré dans l'addon : aucun événement Raid-Helper connu pour lui."))
             self.etat.d["raids"].pop(e["id"], None)
             self.etat.sauver()
             return
-        titre = e.get("title") or "Événement"
+        titre = e.get("title") or T("Événement")
         if e.get("place"):
             titre = "%s — %s" % (e["place"], titre)
         if not e.get("when"):
-            self.log("Événement « %s » sans date ou heure valide (JJ/MM et HH:MM) : pas publié sur Raid-Helper." % titre)
+            self.log(T("Événement « %s » sans date ou heure valide (JJ/MM et HH:MM) : pas publié sur Raid-Helper.") % titre)
             return
         if e["when"] < time.time() and not (r and r.get("rh")):
-            self.log("Événement « %s » : la date et l'heure sont déjà passées, pas publié sur Raid-Helper "
-                     "(il serait clôturé). Corrigez-les dans l'addon, puis Enregistrer." % titre)
+            self.log(T("Événement « %s » : la date et l'heure sont déjà passées, pas publié sur Raid-Helper "
+                       "(il serait clôturé). Corrigez-les dans l'addon, puis Enregistrer.") % titre)
             return
         sig = json.dumps([titre, e.get("desc"), e.get("when"), e.get("size"), e.get("kind")], ensure_ascii=False)
         desc = (e.get("desc") or "").strip()
-        type_txt = {"raid": "Raid", "donjon": "Donjon", "jcj": "JcJ"}.get(e.get("kind"), "Raid")
+        type_txt = T({"raid": "Raid", "donjon": "Donjon", "jcj": "JcJ"}.get(e.get("kind"), "Raid"))
         corps = {"title": titre, "date": str(int(e["when"])), "time": str(int(e["when"])),
-                 "description": (desc + "\n\n" if desc else "") + "%s · %d joueurs · préparé avec GuildByMorricette · %s"
+                 "description": (desc + "\n\n" if desc else "") + T("%s · %d joueurs · préparé avec GuildByMorricette · %s")
                  % (type_txt, e.get("size", 40), etiquette("E", e["id"]))}
         corps["templateId"] = str(self.cfg.get("modele_rh") or MODELE_FOREVER)   # par defaut : WoW: Forever
         corps["leaderId"] = self.organisateur(e)    # obligatoire pour Raid-Helper
@@ -393,22 +403,25 @@ class Relais:
             except ErreurRaidHelper:
                 ev = rh.creer(self.cfg["serveur"], self.cfg["salon_rh"], corps)   # sans la limite de places
             if not ev.get("id"):
-                self.log("⚠ Raid-Helper a répondu sans numéro d'événement : %s" % json.dumps(ev, ensure_ascii=False)[:300])
+                self.log(T("⚠ Raid-Helper a répondu sans numéro d'événement : %s") % json.dumps(ev, ensure_ascii=False)[:300])
                 return
             r = {"rh": str(ev.get("id")), "sig": sig, "inscrits": {}}
             self.etat.d["raids"][e["id"]] = r
             self.etat.sauver()
-            self.log("Événement Raid-Helper créé : %s (n° %s)." % (corps["title"], r["rh"]))
+            self.log(T("Événement Raid-Helper créé : %s (n° %s).") % (corps["title"], r["rh"]))
             self._un_seul_evenement(e, titre, r)
         elif r.get("sig") != sig:
             ev = rh.modifier(r["rh"], corps)
             r["sig"] = sig
-            self.log("Événement Raid-Helper modifié : %s." % corps["title"])
+            self.log(T("Événement Raid-Helper modifié : %s.") % corps["title"])
+        if r.get("when") != e["when"]:          # 1.3.0 : date changee -> le rappel sera refait
+            r.pop("rappel", None)
+        r["when"], r["titre"] = e["when"], titre
         self._inscriptions(e, r)
         try:
             self._appel_roles(e, r, titre)
         except ErreurDiscord as err:                     # le bot ne peut pas ecrire dans le salon : on le signale
-            self.log("⚠ Appel des rôles manquants impossible : %s" % err)
+            self.log(T("⚠ Appel des rôles manquants impossible : %s") % err)
         self.etat.sauver()
 
     def _memes_evenements(self, e, titre, frais=False):
@@ -418,7 +431,7 @@ class Relais:
             try:
                 c = self._rh_liste = (time.time(), self.rh().evenements(self.cfg["serveur"]))
             except ErreurRaidHelper as err:
-                self.log("⚠ Raid-Helper : liste des événements illisible, doublons non vérifiés (%s)." % err)
+                self.log(T("⚠ Raid-Helper : liste des événements illisible, doublons non vérifiés (%s).") % err)
                 return []
         liste = c[1]
         etiq, out = etiquette("E", e["id"]), []
@@ -433,7 +446,7 @@ class Relais:
         return sorted(out, key=lambda x: _num(x.get("id")))
 
     def _titre(self, e):
-        titre = e.get("title") or "Événement"
+        titre = e.get("title") or T("Événement")
         return "%s — %s" % (e["place"], titre) if e.get("place") else titre
 
     def _reprendre(self, e):
@@ -445,7 +458,7 @@ class Relais:
             return None
         r = {"rh": str(memes[0]["id"]), "sig": None, "inscrits": {}}
         self.etat.d["raids"][e["id"]] = r
-        self.log("Événement déjà publié sur Raid-Helper par un autre officier : %s (n° %s, repris)." % (self._titre(e), r["rh"]))
+        self.log(T("Événement déjà publié sur Raid-Helper par un autre officier : %s (n° %s, repris).") % (self._titre(e), r["rh"]))
         return r
 
     def _un_seul_evenement(self, e, titre, r):
@@ -459,8 +472,66 @@ class Relais:
         for ev in memes[1:]:
             self.rh().supprimer(ev["id"])
         if garde != r["rh"]:
-            self.log("Doublon évité : « %s » avait été créé au même moment par un autre officier (n° %s gardé)." % (titre, garde))
+            self.log(T("Doublon évité : « %s » avait été créé au même moment par un autre officier (n° %s gardé).") % (titre, garde))
             r["rh"], r["inscrits"] = garde, {}
+
+    def rappels(self):
+        """1.3.0 : avant le depart (60 min par defaut), le bot mentionne les inscrits sous l'evenement Raid-Helper.
+        Le message est efface 3 heures apres le depart. Un seul rappel, meme avec plusieurs officiers (etiquette)."""
+        if not (self.cfg.get("rappel_inscrits", True) and self.cfg.get("cle_rh") and self.cfg.get("salon_rh")):
+            return
+        salon, change = self.cfg["salon_rh"], False
+        try:
+            avance = 60 * max(5, int(self.cfg.get("rappel_minutes") or 60))
+        except (TypeError, ValueError):
+            avance = 3600
+        for eid, r in list(self.etat.d["raids"].items()):
+            quand = r.get("when")
+            if not quand or not r.get("rh"):
+                continue
+            reste = quand - time.time()
+            etiq = etiquette("R", eid)
+            if r.get("rappel") and r["rappel"] != "fini" and reste < -3 * 3600:
+                try:
+                    self.discord().effacer(salon, r["rappel"])
+                except ErreurDiscord:
+                    pass
+                r["rappel"] = "fini"
+                change = True
+                continue
+            if r.get("rappel") or reste <= 0 or reste > avance:
+                continue
+            deja = self.chercher(salon, etiq)
+            if deja:                                  # un autre officier l'a deja fait
+                r["rappel"] = str(deja[0]["id"])
+                change = True
+                continue
+            try:
+                ev = self.rh().evenement(r["rh"])
+            except ErreurRaidHelper as err:
+                self.log(T("⚠ Rappel impossible, Raid-Helper : %s") % err)
+                continue
+            ids, noms = [], []
+            for s in (ev.get("signUps") or ev.get("signups") or []):
+                if str(s.get("className") or "").lower() in ("absence", "absent"):
+                    continue
+                uid = str(s.get("userId") or "")
+                if uid.isdigit() and uid not in ids:
+                    ids.append(uid)
+                elif s.get("name"):
+                    noms.append(str(s["name"]))
+            minutes = max(1, int(round(reste / 60)))
+            texte = T("⏰ **%s** commence dans %d min !") % (r.get("titre") or T("Événement"), minutes)
+            if ids:
+                texte += " " + " ".join("<@%s>" % u for u in ids[:60])
+            if noms:
+                texte += T("\nAussi inscrits : ") + ", ".join(noms[:30])
+            texte += "\n-# %s" % etiq
+            r["rappel"] = self.garder_un(salon, etiq, self.discord().message(salon, texte, mentions=ids[:60]))
+            change = True
+            self.log(T("Rappel envoyé pour « %s » (%d inscrits mentionnés).") % (r.get("titre") or "?", len(ids[:60])))
+        if change:
+            self.etat.sauver()
 
     def manques(self, e):
         """{T: n, H: n, D: n} : places de tank, soigneur et degats encore libres dans la composition de l'evenement."""
@@ -493,11 +564,12 @@ class Relais:
                     self.discord().effacer(salon, x)
                 r.pop("appel", None)
                 r.pop("appel_txt", None)
-                self.log("« %s » : composition complète, appel des rôles retiré." % titre)
+                self.log(T("« %s » : composition complète, appel des rôles retiré.") % titre)
             return
-        ids = {k: self.id_role(ROLES_COMBAT[k]) for k in m}
-        morceaux = ["%d %s" % (n, ("<@&%s>" % ids[k]) if ids[k] else ROLES_COMBAT[k]) for k, n in m.items()]
-        texte = "🔔 **%s** : il manque encore %s. Inscrivez-vous ci-dessus !\n-# %s" % (titre, ", ".join(morceaux), etiq)
+        ids = {k: self.id_role(ROLES_COMBAT[k]) or self.id_role(ROLES_COMBAT_EN[k]) for k in m}
+        noms = ROLES_COMBAT_EN if lang.LANGUE == "en" else ROLES_COMBAT     # langue de l'application
+        morceaux = ["%d %s" % (n, ("<@&%s>" % ids[k]) if ids[k] else noms[k]) for k, n in m.items()]
+        texte = T("🔔 **%s** : il manque encore %s. Inscrivez-vous ci-dessus !\n-# %s") % (titre, ", ".join(morceaux), etiq)
         if ancien:
             if r.get("appel_txt") != texte:
                 self.discord().changer(salon, ancien, contenu=texte)
@@ -506,7 +578,7 @@ class Relais:
         roles = [i for i in ids.values() if i]
         r["appel"] = self.garder_un(salon, etiq, self.discord().message(salon, texte, roles=roles))
         r["appel_txt"] = texte
-        self.log("« %s » : appel des rôles manquants (%s)." % (titre, ", ".join("%d %s" % (n, ROLES_COMBAT[k]) for k, n in m.items())))
+        self.log(T("« %s » : appel des rôles manquants (%s).") % (titre, ", ".join("%d %s" % (n, noms[k]) for k, n in m.items())))
 
     def _inscriptions(self, e, r):
         rh = self.rh()
@@ -514,7 +586,7 @@ class Relais:
         inscrits = r.setdefault("inscrits", {})
         for nom in [n for n in inscrits if n not in voulus]:            # retires de la composition
             rh.desinscrire(r["rh"], inscrits.pop(nom))
-            self.log("Raid-Helper : %s retiré." % nom)
+            self.log(T("Raid-Helper : %s retiré.") % nom)
         nouveaux = [s for n, s in voulus.items() if n not in inscrits]
         if not nouveaux:
             return
@@ -546,10 +618,10 @@ class Relais:
                 try:
                     ev = rh.inscrire(r["rh"], corps)
                 except ErreurRaidHelper as err:                          # un joueur refuse n'empeche pas les autres
-                    self.log("⚠ Raid-Helper : %s pas inscrit (%s)." % (s["name"], err))
+                    self.log(T("⚠ Raid-Helper : %s pas inscrit (%s).") % (s["name"], err))
                     continue
             inscrits[s["name"]] = trouver_inscription(ev, s["name"], uid) or "?"
-            self.log("Raid-Helper : %s inscrit%s." % (s["name"], "" if uid else " (sans compte Discord)"))
+            self.log(T("Raid-Helper : %s inscrit%s.") % (s["name"], "" if uid else T(" (sans compte Discord)")))
 
     # Traitement commun ----------------------------------------------------------------------------------------
     def traiter(self, genre, donnees):
@@ -559,7 +631,7 @@ class Relais:
             elif genre == "E":
                 self.evenement(donnees)
             elif genre == "T":
-                self.log("Relais : ligne de test reçue du jeu (%s). Le relais en direct fonctionne." % donnees.get("by", "?"))
+                self.log(T("Relais : ligne de test reçue du jeu (%s). Le relais en direct fonctionne.") % donnees.get("by", "?"))
         except (ErreurDiscord, ErreurRaidHelper) as e:
             self.log("⚠ " + str(e))
 

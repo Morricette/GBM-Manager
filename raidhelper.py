@@ -8,6 +8,8 @@ import time
 import urllib.error
 import urllib.request
 
+from lang import T
+
 API = "https://raid-helper.xyz/api/v4"
 AGENT = "GBM-Manager (GuildByMorricette)"
 
@@ -37,12 +39,12 @@ class RaidHelper:
                 time.sleep(3)
                 return self._appel(methode, chemin, corps, essais - 1)
             if e.code in (401, 403):
-                raise ErreurRaidHelper("Raid-Helper refuse la cle API (%s) : recopiez-la avec /apikey sur Discord." % e.code)
+                raise ErreurRaidHelper(T("Raid-Helper refuse la cle API (%s) : recopiez-la avec /apikey sur Discord.") % e.code)
             if e.code == 404:
-                raise ErreurRaidHelper("Raid-Helper : introuvable (404). Verifiez l'identifiant du serveur et du salon.")
-            raise ErreurRaidHelper("Raid-Helper, erreur %s : %s" % (e.code, texte[:300]))
+                raise ErreurRaidHelper(T("Raid-Helper : introuvable (404). Verifiez l'identifiant du serveur et du salon."))
+            raise ErreurRaidHelper(T("Raid-Helper, erreur %s : %s") % (e.code, texte[:300]))
         except urllib.error.URLError as e:
-            raise ErreurRaidHelper("Raid-Helper injoignable (%s)." % e.reason)
+            raise ErreurRaidHelper(T("Raid-Helper injoignable (%s).") % e.reason)
 
     def creer(self, serveur, salon, corps):
         r = self._appel("POST", "/servers/%s/channels/%s/event" % (serveur, salon), corps)

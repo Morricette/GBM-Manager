@@ -11,6 +11,8 @@ import re
 import time
 import unicodedata
 
+from lang import T
+
 FORMAT_SUPPORTE = 1
 VARIABLE = "GuildeForeverRecensement"
 
@@ -70,14 +72,14 @@ def lire_export(chemin):
         texte = f.read()
     m = re.search(rb'^' + VARIABLE.encode() + rb'\s*=\s*"((?:[^"\\]|\\.)*)"', texte, re.M | re.S)
     if not m and re.search(rb'^' + VARIABLE.encode() + rb'\s*=\s*\{', texte, re.M):
-        raise ValueError("L'export du fichier de sauvegarde est abime (bug de l'addon 1.16.0 de test) : installez la "
-                         "derniere version de l'addon, puis tapez /reload.")
+        raise ValueError(T("L'export du fichier de sauvegarde est abime (bug de l'addon 1.16.0 de test) : installez la "
+                           "derniere version de l'addon, puis tapez /reload."))
     if not m:
-        raise ValueError("Pas de recensement dans ce fichier. En jeu, ouvrez l'onglet Recensement de la fenetre Guilde "
-                         "(rang autorise par le chef de guilde), puis deconnectez-vous ou tapez /reload.")
+        raise ValueError(T("Pas de recensement dans ce fichier. En jeu, ouvrez l'onglet Recensement de la fenetre Guilde "
+                           "(rang autorise par le chef de guilde), puis deconnectez-vous ou tapez /reload."))
     doc = json.loads(dechiffrer_chaine_lua(m.group(1)).decode("utf-8"))
     if doc.get("format", 0) > FORMAT_SUPPORTE:
-        raise ValueError("Export au format %s : mettez l'application a jour." % doc.get("format"))
+        raise ValueError(T("Export au format %s : mettez l'application a jour.") % doc.get("format"))
     return doc
 
 
@@ -189,39 +191,39 @@ def embed(res):
             "**%d** joueurs (rerolls regroupés) · **%d** personnages\n"
             "**%d** avec l'addon · **%d** membres sur le Discord"
             % (res["joueurs"], res["persos"], st.get("withAddon", 0), res["discord_total"]))},
-        {"name": "✅ En jeu et sur Discord (%d)" % len(res["des_deux"]), "inline": False,
+        {"name": T("✅ En jeu et sur Discord (%d)") % len(res["des_deux"]), "inline": False,
          "value": _liste(["%s (%s)" % (j["main"], j["membre_discord"]["affiche"]) for j in res["des_deux"]])},
-        {"name": "🎮 En jeu, sans pseudo Discord (%d)" % len(res["sans_pseudo"]), "inline": False,
+        {"name": T("🎮 En jeu, sans pseudo Discord (%d)") % len(res["sans_pseudo"]), "inline": False,
          "value": _liste([j["main"] for j in res["sans_pseudo"]])},
-        {"name": "❓ Pseudo donné mais introuvable sur le serveur (%d)" % len(res["introuvables"]), "inline": False,
+        {"name": T("❓ Pseudo donné mais introuvable sur le serveur (%d)") % len(res["introuvables"]), "inline": False,
          "value": _liste(["%s (« %s »)" % (j["main"], j["discord"]) for j in res["introuvables"]])},
-        {"name": "💬 Sur Discord, pas dans la guilde (%d)" % len(res["discord_seul"]), "inline": False,
+        {"name": T("💬 Sur Discord, pas dans la guilde (%d)") % len(res["discord_seul"]), "inline": False,
          "value": _liste([d["affiche"] for d in res["discord_seul"]])},
-        {"name": "Arrivées et départs (7 jours)", "inline": False, "value": (
+        {"name": T("Arrivées et départs (7 jours)"), "inline": False, "value": (
             "Arrivées : %s\nDéparts : %s" % (
                 _liste([e["name"] for e in res["arrivees7"]], 480), _liste([e["name"] for e in res["departs7"]], 480)))},
     ]
     return {
-        "title": "Recensement · %s" % res["guilde"],
+        "title": T("Recensement · %s") % res["guilde"],
         "color": COULEUR,
         "fields": champs,
-        "footer": {"text": "GuildByMorricette · photo du roster : %s par %s · sur 30 jours : %d arrivées, %d départs"
+        "footer": {"text": T("GuildByMorricette · photo du roster : %s par %s · sur 30 jours : %d arrivées, %d départs")
                    % (_date(res["photo"]), res["par"] or "?", st.get("joined30", 0), st.get("left30", 0))},
     }
 
 
 def csv_texte(res):
     """Liste complete (separateur ;), pour Excel."""
-    lignes = ["Categorie;Joueur;Personnages;Classe;Niveau;Pseudo Discord;Membre Discord;Derniere connexion"]
+    lignes = [T("Categorie;Joueur;Personnages;Classe;Niveau;Pseudo Discord;Membre Discord;Derniere connexion")]
     def ligne(cat, j, d=None):
         lignes.append(";".join([cat, j["main"], " / ".join(j["persos"]), j.get("classe") or "", str(j.get("niveau") or ""),
                                 j.get("discord") or "", (d or {}).get("affiche", ""), _date(j.get("derniere"))]))
     for j in res["des_deux"]:
-        ligne("En jeu et sur Discord", j, j["membre_discord"])
+        ligne(T("En jeu et sur Discord"), j, j["membre_discord"])
     for j in res["sans_pseudo"]:
-        ligne("En jeu, sans pseudo Discord", j)
+        ligne(T("En jeu, sans pseudo Discord"), j)
     for j in res["introuvables"]:
-        ligne("Pseudo introuvable sur Discord", j)
+        ligne(T("Pseudo introuvable sur Discord"), j)
     for d in res["discord_seul"]:
-        lignes.append(";".join(["Sur Discord, pas dans la guilde", "", "", "", "", "", d["affiche"], ""]))
+        lignes.append(";".join([T("Sur Discord, pas dans la guilde"), "", "", "", "", "", d["affiche"], ""]))
     return "\n".join(lignes) + "\n"

@@ -1,4 +1,4 @@
-GuildByMorricette (GBM) Manager 1.2.0 (application Windows)
+GuildByMorricette (GBM) Manager 1.3.0 (application Windows)
 ===========================================================
 
 Idee proposee par Mekinox et la guilde Mortem In Anima (MIA). Ecrit pour GuildByMorricette.
@@ -29,6 +29,14 @@ Il sert au chef de guilde et aux officiers, sur le PC ou ils jouent. Trois outil
    « il manque 1 @Tank, 2 @Soigneur » (roles Tank, Soigneur, Degats du serveur, s'ils existent). Seule la
    premiere publication notifie ; le message est ensuite corrige, puis efface quand la composition est complete.
    Reperes : 1 tank et 1 soigneur en donjon (5) ; sinon 1 tank pour 10 joueurs et 1 soigneur pour 4.
+
+Nouveau en 1.3.0
+  - Rappel des inscrits : avant le depart d'un evenement (60 minutes par defaut), le bot mentionne les joueurs
+    inscrits sur Raid-Helper ; le message s'efface 3 heures apres le depart.
+  - Nouvelles versions : verification sur GitHub au demarrage puis toutes les 6 heures, installation automatique
+    (case a cocher) : l'application se ferme, se met a jour et se relance.
+  - Langue : francais ou anglais (reglage « Langue / Language »), messages Discord compris. Les roles anglais
+    (Tank, Healer, DPS, Alchemist, Blacksmith...) sont aussi reconnus.
 
 Ce qu'il faut
   - Le chef de guilde ou un officier qui joue sur ce PC, avec « Relais Discord sur ce PC » coche

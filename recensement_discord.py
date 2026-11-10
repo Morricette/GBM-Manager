@@ -13,6 +13,8 @@ import urllib.error
 import urllib.request
 import uuid
 
+from lang import T
+
 API = "https://discord.com/api/v10"
 AGENT = "DiscordBot (https://www.curseforge.com/wow/addons/guildbymorricette, 1.0) GBM-Manager"
 
@@ -51,19 +53,19 @@ class Discord:
                 return self._appel(methode, chemin, corps, multipart, essais - 1)
             raise ErreurDiscord(self._expliquer(e.code, texte))
         except urllib.error.URLError as e:
-            raise ErreurDiscord("Discord injoignable (%s). Verifiez la connexion Internet." % e.reason)
+            raise ErreurDiscord(T("Discord injoignable (%s). Verifiez la connexion Internet.") % e.reason)
 
     @staticmethod
     def _expliquer(code, texte):
         if code == 401:
-            return "Cle du bot refusee (401) : recopiez la cle depuis le portail des developpeurs Discord."
+            return T("Cle du bot refusee (401) : recopiez la cle depuis le portail des developpeurs Discord.")
         if code == 403:
-            return ("Acces refuse (403) : le bot n'a pas les droits dans ce salon (voir, envoyer des messages, "
-                    "integrer des liens, joindre des fichiers, lire l'historique des messages), ou l'option "
-                    "Server Members Intent est desactivee.")
+            return T("Acces refuse (403) : le bot n'a pas les droits dans ce salon (voir, envoyer des messages, "
+                     "integrer des liens, joindre des fichiers, lire l'historique des messages), ou l'option "
+                     "Server Members Intent est desactivee.")
         if code == 404:
-            return "Introuvable (404) : verifiez l'identifiant du serveur et celui du salon."
-        return "Erreur Discord %s : %s" % (code, texte[:300])
+            return T("Introuvable (404) : verifiez l'identifiant du serveur et celui du salon.")
+        return T("Erreur Discord %s : %s") % (code, texte[:300])
 
     # --- lecture -----------------------------------------------------------------------------------------
     def moi(self):

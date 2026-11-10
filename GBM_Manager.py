@@ -15,13 +15,17 @@ import sys
 import threading
 import time
 
+from lang import T
+
 import aide
+import lang
+import maj
 import recensement_core as core
 import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -150,8 +154,8 @@ def icone_horloge(titre, ouvrir, quitter):
         image = Image.open(os.path.join(base, "icone.ico"))
     except Exception:
         image = Image.new("RGB", (64, 64), (60, 20, 90))
-    menu = pystray.Menu(pystray.MenuItem("Ouvrir GBM Manager", lambda i, it: ouvrir(), default=True),
-                        pystray.MenuItem("Quitter GBM Manager", lambda i, it: quitter()))
+    menu = pystray.Menu(pystray.MenuItem(T("Ouvrir GBM Manager"), lambda i, it: ouvrir(), default=True),
+                        pystray.MenuItem(T("Quitter GBM Manager"), lambda i, it: quitter()))
     icone = pystray.Icon("GBM-Manager", image, titre, menu)
     threading.Thread(target=icone.run, daemon=True).start()
     return icone
@@ -181,6 +185,10 @@ def charger_config():
     c.setdefault("cle_rh", "")
     c.setdefault("salon_rh", "")
     c.setdefault("modele_rh", "")
+    c.setdefault("rappel_inscrits", True)      # 1.3.0 : rappel des inscrits avant le depart
+    c.setdefault("rappel_minutes", 60)
+    c.setdefault("maj_auto", True)             # 1.3.0 : installer les nouvelles versions toutes seules
+    c.setdefault("langue", "auto")             # 1.3.0 : auto (Windows), fr ou en
     return c
 
 
@@ -196,12 +204,12 @@ def sauver_config(c):
 def choisir_guilde(doc, nom):
     guildes = doc.get("guilds", [])
     if not guildes:
-        raise ValueError("L'export ne contient aucune guilde recensee.")
+        raise ValueError(T("L'export ne contient aucune guilde recensee."))
     if nom:
         for g in guildes:
             if g.get("guild") == nom:
                 return g
-        raise ValueError("Guilde « %s » absente de l'export (guildes : %s)." % (nom, ", ".join(g.get("guild", "?") for g in guildes)))
+        raise ValueError(T("Guilde « %s » absente de l'export (guildes : %s).") % (nom, ", ".join(g.get("guild", "?") for g in guildes)))
     return max(guildes, key=lambda g: g.get("snapshot") or 0)
 
 
@@ -213,7 +221,7 @@ def mettre_a_jour(cfg, journal, membres_factices=None):
         membres = membres_factices
     else:
         d = Discord(montrer(cfg["cle"]))
-        journal("Lecture des membres du serveur Discord…")
+        journal(T("Lecture des membres du serveur Discord…"))
         membres = d.membres(cfg["serveur"])
     res = core.comparer(g, membres, cfg.get("ignorer_roles"))
     emb = core.embed(res)
@@ -226,12 +234,12 @@ def mettre_a_jour(cfg, journal, membres_factices=None):
     if id_msg:
         try:
             d.modifier(cfg["salon"], id_msg, emb, (nom_csv, csv))
-            journal("Message du salon mis à jour.")
+            journal(T("Message du salon mis à jour."))
             return res, emb, csv
         except ErreurDiscord as e:
             if "404" not in str(e):
                 raise
-            journal("Ancien message introuvable : nouveau message.")
+            journal(T("Ancien message introuvable : nouveau message."))
     # 1.2.0 : un autre officier a peut-etre deja publie le recensement : on reprend son message
     try:
         moi = str(d.moi().get("id"))
@@ -241,19 +249,19 @@ def mettre_a_jour(cfg, journal, membres_factices=None):
                 d.modifier(cfg["salon"], m["id"], emb, (nom_csv, csv))
                 cfg["messages"][cle_msg] = m["id"]
                 sauver_config(cfg)
-                journal("Recensement déjà publié par un autre officier : son message est mis à jour.")
+                journal(T("Recensement déjà publié par un autre officier : son message est mis à jour."))
                 return res, emb, csv
     except ErreurDiscord:
         pass
     cfg["messages"][cle_msg] = d.envoyer(cfg["salon"], emb, (nom_csv, csv))
     sauver_config(cfg)
-    journal("Message publié dans le salon.")
+    journal(T("Message publié dans le salon."))
     return res, emb, csv
 
 
 def resume(res):
-    return ("%s : %d joueurs (%d personnages) · %d en jeu et sur Discord · %d sans pseudo · %d introuvables · "
-            "%d sur Discord seulement" % (res["guilde"], res["joueurs"], res["persos"], len(res["des_deux"]),
+    return (T("%s : %d joueurs (%d personnages) · %d en jeu et sur Discord · %d sans pseudo · %d introuvables · "
+            "%d sur Discord seulement") % (res["guilde"], res["joueurs"], res["persos"], len(res["des_deux"]),
                                            len(res["sans_pseudo"]), len(res["introuvables"]), len(res["discord_seul"])))
 
 
@@ -296,8 +304,8 @@ class Moteur:
                 verif = time.time()
                 avant, ouvert = ouvert, jeu_ouvert()
                 if ouvert != avant:
-                    self.log("Jeu détecté : lecture de la bande de couleurs." if ouvert
-                             else "Jeu fermé : GBM Manager attend son lancement.")
+                    self.log(T("Jeu détecté : lecture de la bande de couleurs.") if ouvert
+                             else T("Jeu fermé : GBM Manager attend son lancement."))
             if not ouvert:
                 time.sleep(1)
                 continue
@@ -309,7 +317,7 @@ class Moteur:
                     self.pixels.etat = "erreur de capture (%s)" % e
                 if self.pixels.etat != self.etat_pixels:
                     if self.pixels.etat == "bande lue":
-                        self.log("Relais : bande de couleurs du jeu trouvée, lecture en direct.")
+                        self.log(T("Relais : bande de couleurs du jeu trouvée, lecture en direct."))
                     self.etat_pixels = self.pixels.etat
                 for genre, donnees in messages:
                     with self.verrou:
@@ -324,7 +332,7 @@ class Moteur:
             except (ValueError, OSError, ErreurDiscord, ErreurRaidHelper) as e:
                 self.log("⚠ " + str(e))
             except Exception as e:  # erreur inattendue : affichee, l'application continue
-                self.log("⚠ Erreur inattendue : %r" % (e,))
+                self.log(T("⚠ Erreur inattendue : %r") % (e,))
             time.sleep(2)
 
     def tour(self):
@@ -337,12 +345,13 @@ class Moteur:
             self.mtime = m        # 1.0.2 : retenu avant la lecture, sinon une erreur la faisait refaire toutes les 2 s
             if nouveau:
                 self.demande = False
-                self.log("Le jeu a enregistré le fichier de sauvegarde : mise à jour.")
+                self.log(T("Le jeu a enregistré le fichier de sauvegarde : mise à jour."))
                 self.depuis_sauvegarde()
         # 3) menage des commandes terminees (toutes les minutes)
         if time.time() - self.dernier_menage > 60:
             self.dernier_menage = time.time()
             self.relais.nettoyer()
+            self.relais.rappels()          # 1.3.0 : rappel des inscrits avant le depart
 
     def depuis_sauvegarde(self):
         cfg = self.cfg
@@ -361,6 +370,7 @@ def fenetre(en_fond=False):
     import webbrowser
     from tkinter import filedialog, messagebox, ttk
 
+    lang.regler(charger_config().get("langue"))   # 1.3.0 : langue de l'application (au lancement)
     if deja_ouvert():                 # 1.2.0 : une seule copie par session Windows
         if not en_fond:
             r = tk.Tk()
@@ -379,8 +389,8 @@ def fenetre(en_fond=False):
 
     root = tk.Tk()
     root.title("%s %s" % (NOM, VERSION))
-    root.geometry("900x720")
-    root.minsize(760, 600)
+    root.geometry("920x820")
+    root.minsize(760, 680)
     try:   # icone (logo de l'addon), aussi dans le .exe
         base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
         root.iconbitmap(os.path.join(base, "icone.ico"))
@@ -392,9 +402,9 @@ def fenetre(en_fond=False):
     t_reg = ttk.Frame(onglets, padding=8)
     t_log = ttk.Frame(onglets, padding=8)
     t_aide = ttk.Frame(onglets, padding=8)
-    onglets.add(t_reg, text="Réglages")
-    onglets.add(t_log, text="Journal")
-    onglets.add(t_aide, text="Aide")
+    onglets.add(t_reg, text=T("Réglages"))
+    onglets.add(t_log, text=T("Journal"))
+    onglets.add(t_aide, text=T("Aide"))
 
     # Journal ------------------------------------------------------------------------------------------------------
     texte = tk.Text(t_log, wrap="word", state="disabled")
@@ -415,19 +425,20 @@ def fenetre(en_fond=False):
     # Aide ---------------------------------------------------------------------------------------------------------
     liens = ttk.Frame(t_aide)
     liens.pack(fill="x")
-    for nom, url in aide.LIENS:
+    for nom, url in aide.liens():
         ttk.Button(liens, text=nom, command=lambda u=url: webbrowser.open(u)).pack(side="left", padx=3, pady=3)
     t_aide_txt = tk.Text(t_aide, wrap="word")
     b2 = ttk.Scrollbar(t_aide, command=t_aide_txt.yview)
     t_aide_txt.configure(yscrollcommand=b2.set)
-    t_aide_txt.insert("1.0", aide.TEXTE)
+    t_aide_txt.insert("1.0", aide.texte())
     t_aide_txt.configure(state="disabled")
     t_aide_txt.pack(side="left", fill="both", expand=True, pady=(6, 0))
     b2.pack(side="right", fill="y", pady=(6, 0))
 
     # Reglages -----------------------------------------------------------------------------------------------------
     v = {k: tk.StringVar(value=str(cfg.get(k) or "")) for k in
-         ("fichier", "serveur", "salon", "guilde", "salon_commandes", "delai_heures", "salon_rh", "modele_rh", "organisateur")}
+         ("fichier", "serveur", "salon", "guilde", "salon_commandes", "delai_heures", "salon_rh", "modele_rh", "organisateur",
+          "rappel_minutes")}
     v["cle"] = tk.StringVar(value=montrer(cfg["cle"]))
     v["cle_rh"] = tk.StringVar(value=montrer(cfg["cle_rh"]))
     v_mention = tk.BooleanVar(value=bool(cfg.get("mentionner", True)))
@@ -435,6 +446,8 @@ def fenetre(en_fond=False):
     v_roles = tk.BooleanVar(value=bool(cfg.get("mentionner_roles", True)))
     v_surv = tk.BooleanVar(value=bool(cfg.get("surveiller", True)))
     v_demarrage = tk.BooleanVar(value=demarrage_actif())
+    v_rappel = tk.BooleanVar(value=bool(cfg.get("rappel_inscrits", True)))
+    v_maj = tk.BooleanVar(value=bool(cfg.get("maj_auto", True)))
     t_reg.columnconfigure(0, weight=1)
 
     def section(titre, ligne):
@@ -447,7 +460,7 @@ def fenetre(en_fond=False):
         ttk.Label(f, text=etiquette).grid(row=r, column=0, sticky="w", padx=4, pady=2)
         ttk.Entry(f, textvariable=v[cle], show="•" if cache else "").grid(row=r, column=1, sticky="ew", padx=4, pady=2)
         if parcourir:
-            ttk.Button(f, text="Parcourir…", command=parcourir).grid(row=r, column=2, padx=4)
+            ttk.Button(f, text=T("Parcourir…"), command=parcourir).grid(row=r, column=2, padx=4)
         elif aide_txt:
             ttk.Label(f, text=aide_txt, foreground="#777").grid(row=r, column=2, sticky="w", padx=4)
 
@@ -456,31 +469,42 @@ def fenetre(en_fond=False):
         if p:
             v[cle].set(p)
 
-    s1 = section("Jeu", 0)
-    champ(s1, 0, "Fichier de sauvegarde :", "fichier", parcourir=lambda: choisir("fichier", "GuildeForever.lua (dossier WTF)", "GuildeForever.lua"))
-    ttk.Label(s1, text="Relais en direct : GBM Manager lit la bande de couleurs en haut à gauche du jeu.\n"
-                       "Jeu en fenêtré ou plein écran fenêtré, coin non couvert par une autre fenêtre.",
+    s1 = section(T("Jeu"), 0)
+    champ(s1, 0, T("Fichier de sauvegarde :"), "fichier", parcourir=lambda: choisir("fichier", T("GuildeForever.lua (dossier WTF)"), "GuildeForever.lua"))
+    ttk.Label(s1, text=T("Relais en direct : GBM Manager lit la bande de couleurs en haut à gauche du jeu.\n"
+                         "Jeu en fenêtré ou plein écran fenêtré, coin non couvert par une autre fenêtre."),
               foreground="#777").grid(row=1, column=1, sticky="w", padx=4)
-    ttk.Checkbutton(s1, text="Lancer GBM Manager au démarrage de Windows (caché près de l'horloge ; il attend que le jeu soit lancé)",
+    ttk.Checkbutton(s1, text=T("Lancer GBM Manager au démarrage de Windows (caché près de l'horloge ; il attend que le jeu soit lancé)"),
                     variable=v_demarrage).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
-    s2 = section("Discord (bot GBM Manager)", 1)
-    champ(s2, 0, "Clé du bot :", "cle", cache=True)
-    champ(s2, 1, "ID du serveur :", "serveur")
-    s3 = section("Recensement", 2)
-    champ(s3, 0, "ID du salon des officiers :", "salon", aide_txt="vide = pas de recensement")
-    champ(s3, 1, "Guilde :", "guilde", aide_txt="vide = la plus récente")
-    ttk.Checkbutton(s3, text="Mettre à jour à chaque enregistrement du jeu (déconnexion ou /reload)", variable=v_surv).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
-    s4 = section("Commandes aux artisans", 3)
-    champ(s4, 0, "ID du salon des commandes :", "salon_commandes", aide_txt="vide = pas de commandes")
-    champ(s4, 1, "Effacer après (heures) :", "delai_heures", aide_txt="commandes reçues ou annulées")
-    ttk.Checkbutton(s4, text="Mentionner l'artisan visé (s'il a donné son pseudo Discord)", variable=v_mention).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
-    ttk.Checkbutton(s4, text="Commande pour tous : mentionner le rôle du métier (@Forgeron, @Alchimiste…)", variable=v_metiers).grid(row=3, column=0, columnspan=3, sticky="w", padx=4)
+    ttk.Checkbutton(s1, text=T("Installer les nouvelles versions de GBM Manager automatiquement"),
+                    variable=v_maj).grid(row=3, column=0, columnspan=3, sticky="w", padx=4)
+    # 1.3.0 : langue de l'application et des messages Discord (au prochain lancement)
+    LANGUES = [("auto", "Auto (Windows)"), ("fr", "Français"), ("en", "English")]
+    ttk.Label(s1, text=T("Langue / Language :")).grid(row=4, column=0, sticky="w", padx=4, pady=2)
+    v_langue = tk.StringVar(value=dict(LANGUES).get(cfg.get("langue") or "auto", "Auto (Windows)"))
+    ttk.Combobox(s1, textvariable=v_langue, values=[n for _, n in LANGUES], state="readonly", width=18).grid(
+        row=4, column=1, sticky="w", padx=4, pady=2)
+    ttk.Label(s1, text=T("au prochain lancement"), foreground="#777").grid(row=4, column=2, sticky="w", padx=4)
+    s2 = section(T("Discord (bot GBM Manager)"), 1)
+    champ(s2, 0, T("Clé du bot :"), "cle", cache=True)
+    champ(s2, 1, T("ID du serveur :"), "serveur")
+    s3 = section(T("Recensement"), 2)
+    champ(s3, 0, T("ID du salon des officiers :"), "salon", aide_txt=T("vide = pas de recensement"))
+    champ(s3, 1, T("Guilde :"), "guilde", aide_txt=T("vide = la plus récente"))
+    ttk.Checkbutton(s3, text=T("Mettre à jour à chaque enregistrement du jeu (déconnexion ou /reload)"), variable=v_surv).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
+    s4 = section(T("Commandes aux artisans"), 3)
+    champ(s4, 0, T("ID du salon des commandes :"), "salon_commandes", aide_txt=T("vide = pas de commandes"))
+    champ(s4, 1, T("Effacer après (heures) :"), "delai_heures", aide_txt=T("commandes reçues ou annulées"))
+    ttk.Checkbutton(s4, text=T("Mentionner l'artisan visé (s'il a donné son pseudo Discord)"), variable=v_mention).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
+    ttk.Checkbutton(s4, text=T("Commande pour tous : mentionner le rôle du métier (@Forgeron, @Alchimiste…)"), variable=v_metiers).grid(row=3, column=0, columnspan=3, sticky="w", padx=4)
     s5 = section("Raid-Helper", 4)
-    champ(s5, 0, "Clé API (/apikey) :", "cle_rh", cache=True)
-    champ(s5, 1, "ID du salon des événements :", "salon_rh", aide_txt="vide = pas de Raid-Helper")
-    champ(s5, 2, "Modèle (facultatif) :", "modele_rh", aide_txt="vide = WoW: Forever (47)")
-    champ(s5, 3, "Organisateur (facultatif) :", "organisateur", aide_txt="ID Discord ; vide = propriétaire du serveur")
-    ttk.Checkbutton(s5, text="Appeler les rôles qui manquent (@Tank, @Soigneur, @Dégâts) sous l'événement", variable=v_roles).grid(row=4, column=0, columnspan=3, sticky="w", padx=4)
+    champ(s5, 0, T("Clé API (/apikey) :"), "cle_rh", cache=True)
+    champ(s5, 1, T("ID du salon des événements :"), "salon_rh", aide_txt=T("vide = pas de Raid-Helper"))
+    champ(s5, 2, T("Modèle (facultatif) :"), "modele_rh", aide_txt=T("vide = WoW: Forever (47)"))
+    champ(s5, 3, T("Organisateur (facultatif) :"), "organisateur", aide_txt=T("ID Discord ; vide = propriétaire du serveur"))
+    ttk.Checkbutton(s5, text=T("Appeler les rôles qui manquent (@Tank, @Soigneur, @Dégâts) sous l'événement"), variable=v_roles).grid(row=4, column=0, columnspan=3, sticky="w", padx=4)
+    ttk.Checkbutton(s5, text=T("Rappeler les inscrits avant le départ (mention sur Discord)"), variable=v_rappel).grid(row=5, column=0, columnspan=2, sticky="w", padx=4)
+    champ(s5, 6, T("Rappel (minutes avant) :"), "rappel_minutes", aide_txt=T("60 par défaut"))
 
     boutons = ttk.Frame(t_reg)
     boutons.grid(row=5, column=0, sticky="w", pady=8)
@@ -500,13 +524,20 @@ def fenetre(en_fond=False):
         cfg["mentionner_metiers"] = bool(v_metiers.get())
         cfg["mentionner_roles"] = bool(v_roles.get())
         cfg["surveiller"] = bool(v_surv.get())
+        cfg["rappel_inscrits"] = bool(v_rappel.get())
+        cfg["maj_auto"] = bool(v_maj.get())
+        cfg["langue"] = {n: c for c, n in LANGUES}.get(v_langue.get(), "auto")
+        try:
+            cfg["rappel_minutes"] = max(5, int(float(v["rappel_minutes"].get().replace(",", ".") or 60)))
+        except ValueError:
+            cfg["rappel_minutes"] = 60
         sauver_config(cfg)
         if bool(v_demarrage.get()) != demarrage_actif():        # 1.2.0
             try:
                 regler_demarrage(bool(v_demarrage.get()))
-                journal("Lancement au démarrage de Windows : %s." % ("activé" if v_demarrage.get() else "désactivé"))
+                journal(T("Lancement au démarrage de Windows : %s.") % (T("activé") if v_demarrage.get() else T("désactivé")))
             except OSError as e:
-                journal("⚠ Lancement au démarrage de Windows impossible à régler : %s" % e)
+                journal(T("⚠ Lancement au démarrage de Windows impossible à régler : %s") % e)
         moteur.relais.membres = None   # liste des membres relue avec les nouveaux reglages
 
     def en_fond(travail):
@@ -516,7 +547,7 @@ def fenetre(en_fond=False):
             except (ValueError, OSError, ErreurDiscord, ErreurRaidHelper) as e:
                 journal("⚠ " + str(e))
             except Exception as e:
-                journal("⚠ Erreur inattendue : %r" % (e,))
+                journal(T("⚠ Erreur inattendue : %r") % (e,))
         threading.Thread(target=tache, daemon=True).start()
 
     def tester():
@@ -526,24 +557,24 @@ def fenetre(en_fond=False):
         def t():
             doc = core.lire_export(cfg["fichier"])
             g = choisir_guilde(doc, cfg["guilde"])
-            journal("Fichier de sauvegarde lu : guilde « %s », %d personnages, %d commandes, %d événements."
+            journal(T("Fichier de sauvegarde lu : guilde « %s », %d personnages, %d commandes, %d événements.")
                     % (g.get("guild"), len(g.get("members", [])), len(g.get("orders", []) or []), len(g.get("raids", []) or [])))
-            ep = moteur.etat_pixels or "en attente"
-            journal("Relais en direct (bande de couleurs) : %s. En jeu, /mg relais test l'affiche 30 secondes." % ep)
+            ep = moteur.etat_pixels or T("en attente")
+            journal(T("Relais en direct (bande de couleurs) : %s. En jeu, /mg relais test l'affiche 30 secondes.") % ep)
             d = Discord(montrer(cfg["cle"]))
-            journal("Bot Discord connecté : %s." % d.moi().get("username"))
-            journal("Serveur : %s, %d membres lisibles." % (d.serveur(cfg["serveur"]).get("name"), len(d.membres(cfg["serveur"]))))
+            journal(T("Bot Discord connecté : %s.") % d.moi().get("username"))
+            journal(T("Serveur : %s, %d membres lisibles.") % (d.serveur(cfg["serveur"]).get("name"), len(d.membres(cfg["serveur"]))))
             if cfg.get("cle_rh"):
                 from raidhelper import RaidHelper
                 RaidHelper(montrer(cfg["cle_rh"]))._appel("GET", "/servers/%s/events" % cfg["serveur"])
-                journal("Raid-Helper : clé API acceptée.")
-            journal("Tout est prêt. Laissez GBM Manager ouvert pendant que vous jouez.")
+                journal(T("Raid-Helper : clé API acceptée."))
+            journal(T("Tout est prêt. Laissez GBM Manager ouvert pendant que vous jouez."))
         en_fond(t)
 
     def maintenant():
         lire_champs()
         moteur.demande = True
-        journal("Mise à jour demandée.")
+        journal(T("Mise à jour demandée."))
 
     def enregistrer_csv():
         lire_champs()
@@ -556,22 +587,23 @@ def fenetre(en_fond=False):
             res = core.comparer(g, Discord(montrer(cfg["cle"])).membres(cfg["serveur"]), cfg.get("ignorer_roles"))
             with open(cible, "wb") as f:
                 f.write(core.csv_texte(res).encode("utf-8-sig"))
-            journal("CSV enregistré : %s" % cible)
+            journal(T("CSV enregistré : %s") % cible)
         en_fond(t)
 
-    ttk.Button(boutons, text="Enregistrer", command=lambda: (lire_champs(), journal("Réglages enregistrés."))).pack(side="left", padx=4)
-    ttk.Button(boutons, text="Tester", command=tester).pack(side="left", padx=4)
-    ttk.Button(boutons, text="Mettre à jour maintenant", command=maintenant).pack(side="left", padx=4)
-    ttk.Button(boutons, text="Recensement en CSV…", command=enregistrer_csv).pack(side="left", padx=4)
+    ttk.Button(boutons, text=T("Enregistrer"), command=lambda: (lire_champs(), journal(T("Réglages enregistrés.")))).pack(side="left", padx=4)
+    ttk.Button(boutons, text=T("Tester"), command=tester).pack(side="left", padx=4)
+    ttk.Button(boutons, text=T("Mettre à jour maintenant"), command=maintenant).pack(side="left", padx=4)
+    ttk.Button(boutons, text=T("Recensement en CSV…"), command=enregistrer_csv).pack(side="left", padx=4)
+    ttk.Button(boutons, text=T("Nouvelle version ?"), command=lambda: verifier_maj(manuel=True)).pack(side="left", padx=4)
 
     moteur = Moteur(cfg, journal)
     moteur.demarrer()
-    journal("%s %s démarré." % (NOM, VERSION))
+    journal(T("%s %s démarré.") % (NOM, VERSION))
     if premier:
         onglets.select(t_aide)
-        journal("Premier lancement : suivez l'onglet Aide (étapes 1 à 4), puis remplissez l'onglet Réglages et cliquez sur « Tester ».")
+        journal(T("Premier lancement : suivez l'onglet Aide (étapes 1 à 4), puis remplissez l'onglet Réglages et cliquez sur « Tester »."))
     if not cfg["fichier"]:
-        journal("Fichier de sauvegarde non trouvé : utilisez « Parcourir… » (dossier _forever_\\WTF\\Account\\<compte>\\SavedVariables).")
+        journal(T("Fichier de sauvegarde non trouvé : utilisez « Parcourir… » (dossier _forever_\\WTF\\Account\\<compte>\\SavedVariables)."))
 
     icone = None
 
@@ -609,6 +641,41 @@ def fenetre(en_fond=False):
             except Exception:
                 pass
     root.protocol("WM_DELETE_WINDOW", fermer)
+
+    # 1.3.0 : nouvelles versions (GitHub), au demarrage puis toutes les 6 heures
+    def verifier_maj(manuel=False):
+        def t():
+            try:
+                version, exe = maj.derniere()
+            except Exception as e:
+                if manuel:
+                    journal(T("⚠ Nouvelle version : GitHub injoignable (%s).") % e)
+                return
+            if not maj.plus_recente(version, VERSION):
+                if manuel:
+                    journal(T("GBM Manager est à jour (%s).") % VERSION)
+                return
+            journal(T("Nouvelle version de GBM Manager disponible : %s (vous avez %s).") % (version, VERSION))
+            if exe and maj.peut_installer() and (cfg.get("maj_auto", True) or manuel):
+                try:
+                    if maj.installer(exe, journal):
+                        root.after(1500, quitter)
+                    return
+                except Exception as e:
+                    journal(T("⚠ Mise à jour automatique impossible (%s). Téléchargez-la : %s") % (e, maj.PAGE))
+            else:
+                journal(T("Téléchargement : %s") % maj.PAGE)
+            if icone:
+                try:
+                    icone.notify(T("GBM Manager %s est disponible.") % version, NOM)
+                except Exception:
+                    pass
+        threading.Thread(target=t, daemon=True).start()
+
+    def maj_periodique():
+        verifier_maj()
+        root.after(6 * 3600 * 1000, maj_periodique)
+    root.after(15000, maj_periodique)
     if icone:
         journal("GBM Manager est près de l'horloge : la croix de la fenêtre le cache sans l'arrêter "
                 "(clic droit sur l'icône pour l'ouvrir ou le quitter).")
