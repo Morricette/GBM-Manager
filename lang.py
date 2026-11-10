@@ -1,4 +1,4 @@
-"""GuildByMorricette (GBM) Manager - langue de l'application et des messages Discord (1.3.0).
+"""GuildByMorricette (GBM) Manager - langue de l'application et des messages Discord (1.2.1).
 
 Le texte francais sert de cle : T("texte") rend la traduction anglaise quand la langue est l'anglais.
 Langue : reglage "langue" (auto = celle de Windows, fr, en). Le changement s'applique au prochain lancement.

@@ -25,7 +25,7 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.3.0"
+VERSION = "1.2.1"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
@@ -185,10 +185,10 @@ def charger_config():
     c.setdefault("cle_rh", "")
     c.setdefault("salon_rh", "")
     c.setdefault("modele_rh", "")
-    c.setdefault("rappel_inscrits", True)      # 1.3.0 : rappel des inscrits avant le depart
+    c.setdefault("rappel_inscrits", True)      # 1.2.1 : rappel des inscrits avant le depart
     c.setdefault("rappel_minutes", 60)
-    c.setdefault("maj_auto", True)             # 1.3.0 : installer les nouvelles versions toutes seules
-    c.setdefault("langue", "auto")             # 1.3.0 : auto (Windows), fr ou en
+    c.setdefault("maj_auto", True)             # 1.2.1 : installer les nouvelles versions toutes seules
+    c.setdefault("langue", "auto")             # 1.2.1 : auto (Windows), fr ou en
     return c
 
 
@@ -351,7 +351,7 @@ class Moteur:
         if time.time() - self.dernier_menage > 60:
             self.dernier_menage = time.time()
             self.relais.nettoyer()
-            self.relais.rappels()          # 1.3.0 : rappel des inscrits avant le depart
+            self.relais.rappels()          # 1.2.1 : rappel des inscrits avant le depart
 
     def depuis_sauvegarde(self):
         cfg = self.cfg
@@ -370,7 +370,7 @@ def fenetre(en_fond=False):
     import webbrowser
     from tkinter import filedialog, messagebox, ttk
 
-    lang.regler(charger_config().get("langue"))   # 1.3.0 : langue de l'application (au lancement)
+    lang.regler(charger_config().get("langue"))   # 1.2.1 : langue de l'application (au lancement)
     if deja_ouvert():                 # 1.2.0 : une seule copie par session Windows
         if not en_fond:
             r = tk.Tk()
@@ -478,7 +478,7 @@ def fenetre(en_fond=False):
                     variable=v_demarrage).grid(row=2, column=0, columnspan=3, sticky="w", padx=4)
     ttk.Checkbutton(s1, text=T("Installer les nouvelles versions de GBM Manager automatiquement"),
                     variable=v_maj).grid(row=3, column=0, columnspan=3, sticky="w", padx=4)
-    # 1.3.0 : langue de l'application et des messages Discord (au prochain lancement)
+    # 1.2.1 : langue de l'application et des messages Discord (au prochain lancement)
     LANGUES = [("auto", "Auto (Windows)"), ("fr", "Français"), ("en", "English")]
     ttk.Label(s1, text=T("Langue / Language :")).grid(row=4, column=0, sticky="w", padx=4, pady=2)
     v_langue = tk.StringVar(value=dict(LANGUES).get(cfg.get("langue") or "auto", "Auto (Windows)"))
@@ -642,7 +642,7 @@ def fenetre(en_fond=False):
                 pass
     root.protocol("WM_DELETE_WINDOW", fermer)
 
-    # 1.3.0 : nouvelles versions (GitHub), au demarrage puis toutes les 6 heures
+    # 1.2.1 : nouvelles versions (GitHub), au demarrage puis toutes les 6 heures
     def verifier_maj(manuel=False):
         def t():
             try:

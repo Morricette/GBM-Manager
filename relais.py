@@ -34,7 +34,7 @@ ROLES_METIERS = {
 ROLES_METIERS = {core.normaliser(k): v for k, v in ROLES_METIERS.items()}   # memes regles que les noms recus
 # Role T / H / D -> role Discord appele quand il en manque dans la composition d'un evenement
 ROLES_COMBAT = {"T": "Tank", "H": "Soigneur", "D": "Dégâts"}
-# 1.3.0 : serveurs en anglais (role cherche sous son nom anglais si le nom francais n'existe pas)
+# 1.2.1 : serveurs en anglais (role cherche sous son nom anglais si le nom francais n'existe pas)
 ROLES_COMBAT_EN = {"T": "Tank", "H": "Healer", "D": "DPS"}
 ROLES_METIERS_EN = {"Alchimiste": "Alchemist", "Forgeron": "Blacksmith", "Enchanteur": "Enchanter", "Ingénieur": "Engineer",
                     "Travailleur du cuir": "Leatherworker", "Tailleur": "Tailor", "Mineur": "Miner", "Cuisinier": "Cook",
@@ -414,7 +414,7 @@ class Relais:
             ev = rh.modifier(r["rh"], corps)
             r["sig"] = sig
             self.log(T("Événement Raid-Helper modifié : %s.") % corps["title"])
-        if r.get("when") != e["when"]:          # 1.3.0 : date changee -> le rappel sera refait
+        if r.get("when") != e["when"]:          # 1.2.1 : date changee -> le rappel sera refait
             r.pop("rappel", None)
         r["when"], r["titre"] = e["when"], titre
         self._inscriptions(e, r)
@@ -476,7 +476,7 @@ class Relais:
             r["rh"], r["inscrits"] = garde, {}
 
     def rappels(self):
-        """1.3.0 : avant le depart (60 min par defaut), le bot mentionne les inscrits sous l'evenement Raid-Helper.
+        """1.2.1 : avant le depart (60 min par defaut), le bot mentionne les inscrits sous l'evenement Raid-Helper.
         Le message est efface 3 heures apres le depart. Un seul rappel, meme avec plusieurs officiers (etiquette)."""
         if not (self.cfg.get("rappel_inscrits", True) and self.cfg.get("cle_rh") and self.cfg.get("salon_rh")):
             return

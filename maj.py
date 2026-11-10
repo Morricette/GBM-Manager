@@ -1,4 +1,4 @@
-"""GuildByMorricette (GBM) Manager - nouvelles versions (1.3.0).
+"""GuildByMorricette (GBM) Manager - nouvelles versions (1.2.1).
 
 Avis : au demarrage puis toutes les 6 heures, l'application demande a GitHub la derniere version publiee.
 Mise a jour : le nouveau GBM_Manager.exe est telecharge a cote de l'ancien, puis un petit script attend la fermeture

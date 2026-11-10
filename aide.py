@@ -78,7 +78,7 @@ PLUSIEURS OFFICIERS EN MÊME TEMPS (1.2.0, addon 1.16.2)
   • Tous les officiers utilisent le même bot : chacun colle la même clé du bot (et la même clé Raid-Helper).
     Le chef de guilde décide à qui il les donne ; si une clé fuit, il la régénère et redonne la nouvelle.
 
-NOUVEAU EN 1.3.0
+NOUVEAU EN 1.2.1
   • Rappel des inscrits : avant le départ d'un événement (60 minutes par défaut, réglable), le bot mentionne les
     joueurs inscrits sur Raid-Helper sous l'événement ; le message s'efface 3 heures après le départ.
   • Nouvelles versions : GBM Manager regarde sur GitHub au démarrage puis toutes les 6 heures, et s'installe tout seul
