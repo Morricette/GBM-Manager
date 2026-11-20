@@ -25,11 +25,38 @@ import relais
 from raidhelper import ErreurRaidHelper
 from recensement_discord import Discord, ErreurDiscord
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 NOM = "GuildByMorricette (GBM) Manager"
 DOSSIER = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "GBM-Manager")
 CONFIG = os.path.join(DOSSIER, "config.json")
 ETAT = os.path.join(DOSSIER, "etat.json")
+ERREURS = os.path.join(DOSSIER, "erreurs.txt")
+
+
+# --- Fichier des erreurs (1.2.2) --------------------------------------------------------------------------------------
+def noter_erreur(titre, exc=None):
+    """Ajoute une erreur a %APPDATA%\\GBM-Manager\\erreurs.txt (l'application n'a pas de console : sans ce fichier,
+    un plantage au lancement avec Windows ne laisse aucune trace). Le fichier est limite a environ 200 Ko."""
+    try:
+        import traceback
+        os.makedirs(DOSSIER, exist_ok=True)
+        if os.path.exists(ERREURS) and os.path.getsize(ERREURS) > 200_000:
+            os.replace(ERREURS, ERREURS + ".ancien")
+        texte = "".join(traceback.format_exception(*exc)) if exc else ""
+        with open(ERREURS, "a", encoding="utf-8") as f:
+            f.write("%s  GBM Manager %s  %s  (arguments : %s)\n%s\n" % (
+                time.strftime("%Y-%m-%d %H:%M:%S"), VERSION, titre, " ".join(sys.argv[1:]) or "-", texte))
+    except Exception:
+        pass
+
+
+def _hook_erreurs():
+    def principal(t, v, tb):
+        noter_erreur("Erreur inattendue", (t, v, tb))
+    sys.excepthook = principal
+    if hasattr(threading, "excepthook"):
+        threading.excepthook = lambda a: noter_erreur("Erreur dans une tache (%s)" % getattr(a.thread, "name", "?"),
+                                                      (a.exc_type, a.exc_value, a.exc_traceback))
 
 
 # --- Cle du bot : chiffree pour l'utilisateur Windows (DPAPI) ------------------------------------------------------
@@ -95,6 +122,62 @@ def demarrage_actif():
         return False
 
 
+def valeur_demarrage():
+    """Commande enregistree pour le lancement avec Windows, ou None (1.2.2)."""
+    if os.name != "nt":
+        return None
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLE_RUN) as k:
+            return winreg.QueryValueEx(k, NOM_RUN)[0]
+    except OSError:
+        return None
+
+
+def reparer_demarrage():
+    """1.2.2 : si le lancement avec Windows est coche mais vise un autre fichier (GBM_Manager.exe deplace, renomme
+    ou nouvelle version telechargee ailleurs), on remet le chemin du programme en cours. Rend True si repare."""
+    v = valeur_demarrage()
+    if v is None or v == commande_demarrage():
+        return False
+    try:
+        regler_demarrage(True)
+        return True
+    except OSError as e:
+        noter_erreur("Lancement avec Windows impossible a reparer : %s" % e)
+        return False
+
+
+def debloquer_programme():
+    """1.2.2 : retire la marque « telecharge depuis Internet » de GBM_Manager.exe (comme « Debloquer » dans ses
+    proprietes). Le joueur l'a deja lance lui-meme ; sans cela, au lancement avec Windows, l'avertissement de
+    Windows (programme non signe) ne peut pas s'afficher et le programme ne demarre pas."""
+    if os.name != "nt" or not getattr(sys, "frozen", False):
+        return
+    try:
+        os.remove(sys.executable + ":Zone.Identifier")
+    except OSError:
+        pass
+
+
+def barre_des_taches_prete(attente_max=180):
+    """1.2.2 : au lancement avec Windows, attend que la barre des taches existe (sinon l'icone pres de l'horloge
+    n'apparait pas et l'application reste invisible). Rend True si elle est prete."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        trouver = ctypes.windll.user32.FindWindowW
+    except Exception:
+        return True
+    debut = time.time()
+    while time.time() - debut < attente_max:
+        if trouver("Shell_TrayWnd", None):
+            return True
+        time.sleep(2)
+    return False
+
+
 def regler_demarrage(actif):
     """Ajoute ou retire GBM Manager des programmes lances a l'ouverture de la session Windows (compte courant)."""
     if os.name != "nt":
@@ -141,7 +224,7 @@ def jeu_ouvert():
     return False
 
 
-def icone_horloge(titre, ouvrir, quitter):
+def icone_horloge(titre, ouvrir, quitter, sans_icone=None):
     """Icone de GBM Manager dans la zone de notification, pres de l'horloge (1.2.0). Rend l'icone, ou None si la
     bibliotheque pystray n'est pas disponible (la fenetre se reduit alors dans la barre des taches)."""
     try:
@@ -157,7 +240,15 @@ def icone_horloge(titre, ouvrir, quitter):
     menu = pystray.Menu(pystray.MenuItem(T("Ouvrir GBM Manager"), lambda i, it: ouvrir(), default=True),
                         pystray.MenuItem(T("Quitter GBM Manager"), lambda i, it: quitter()))
     icone = pystray.Icon("GBM-Manager", image, titre, menu)
-    threading.Thread(target=icone.run, daemon=True).start()
+
+    def tourner():
+        try:
+            icone.run()
+        except Exception:
+            noter_erreur("Icone pres de l'horloge impossible", sys.exc_info())
+            if sans_icone:
+                sans_icone()
+    threading.Thread(target=tourner, daemon=True).start()
     return icone
 
 
@@ -379,6 +470,11 @@ def fenetre(en_fond=False):
                                        "(flèche ^ en bas à droite de l'écran)."))
             r.destroy()
         return
+    # 1.2.2 : lancement avec Windows remis sur ce programme, marque Internet retiree, barre des taches attendue
+    repare = reparer_demarrage()
+    debloquer_programme()
+    if en_fond and not barre_des_taches_prete():
+        noter_erreur("Barre des taches introuvable apres 3 minutes : la fenetre s'affichera reduite")
 
     premier = not os.path.exists(CONFIG)
     cfg = charger_config()
@@ -388,6 +484,7 @@ def fenetre(en_fond=False):
             cfg["fichier"] = trouves[0]
 
     root = tk.Tk()
+    root.report_callback_exception = lambda t, v, tb: noter_erreur("Erreur dans la fenetre", (t, v, tb))   # 1.2.2
     root.title("%s %s" % (NOM, VERSION))
     root.geometry("920x820")
     root.minsize(760, 680)
@@ -624,7 +721,15 @@ def fenetre(en_fond=False):
 
     # 1.2.0 : icone pres de l'horloge. La croix de la fenetre la cache (GBM Manager continue de tourner) ;
     # pour l'arreter : clic droit sur l'icone, « Quitter GBM Manager ».
-    icone = icone_horloge("%s %s" % (NOM, VERSION), lambda: root.after(0, montrer_fenetre), lambda: root.after(0, quitter))
+    def sans_icone():                 # 1.2.2 : pas d'icone pres de l'horloge : fenetre reduite, jamais invisible
+        try:
+            root.after(0, root.iconify)
+        except Exception:
+            pass
+    icone = icone_horloge("%s %s" % (NOM, VERSION), lambda: root.after(0, montrer_fenetre), lambda: root.after(0, quitter),
+                          sans_icone)
+    if repare:
+        journal(T("Lancement au démarrage de Windows : chemin du programme mis à jour."))
     averti = []
 
     def fermer():
@@ -712,4 +817,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 4 and sys.argv[1] == "--demo":
         demo(sys.argv[2], sys.argv[3])
     else:
-        fenetre(en_fond="--fond" in sys.argv[1:])
+        _hook_erreurs()               # 1.2.2 : erreurs notees dans erreurs.txt
+        try:
+            fenetre(en_fond="--fond" in sys.argv[1:])
+        except Exception:
+            noter_erreur("Plantage de la fenetre", sys.exc_info())
+            raise

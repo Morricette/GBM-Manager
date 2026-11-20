@@ -225,4 +225,6 @@ EN = {
     "Raid-Helper : introuvable (404). Verifiez l'identifiant du serveur et du salon.": "Raid-Helper: not found (404). Check the server and channel IDs.",
     "Raid-Helper injoignable (%s).": "Raid-Helper unreachable (%s).",
     "Raid-Helper, erreur %s : %s": "Raid-Helper, error %s: %s",
+    # --- 1.2.2 ---
+    "Lancement au démarrage de Windows : chemin du programme mis à jour.": "Start with Windows: program path updated.",
 }
