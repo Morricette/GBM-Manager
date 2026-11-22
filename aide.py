@@ -4,7 +4,7 @@ LIENS = [
     ("Nouvelles versions (GitHub)", "https://github.com/Morricette/GBM-Manager/releases/latest"),
     ("Portail développeurs Discord", "https://discord.com/developers/applications"),
     ("Inviter Raid-Helper", "https://raid-helper.xyz"),
-    ("Discord de l'addon", "https://discord.gg/5fbmYu8cY"),
+    ("Discord de l'addon", "https://discord.gg/57YxTP5j4K"),
     ("Addon sur CurseForge", "https://www.curseforge.com/wow/addons/guildbymorricette"),
 ]
 
@@ -88,6 +88,9 @@ NOUVEAU EN 1.2.1
 
 CE QUI SE PASSE ENSUITE
   • Commandes et événements : publiés quelques secondes après chaque changement en jeu (bande de couleurs).
+  • La bande de couleurs (addon 1.18.0) : fine (4 pixels de haut), en haut à gauche du jeu. Elle ne s'allume que
+    pendant un envoi, environ 15 secondes, puis s'efface. Laissez ce coin visible (pas de fenêtre par-dessus,
+    jeu non réduit). Si GBM Manager était fermé à ce moment, l'envoi est rattrapé au /reload suivant.
   • Recensement : mis à jour à chaque /reload ou déconnexion (le même message est modifié).
   • À chaque /reload ou déconnexion, GBM Manager rattrape aussi tout ce qui aurait été manqué.
 
@@ -111,7 +114,7 @@ LIENS_EN = [
     ("New versions (GitHub)", "https://github.com/Morricette/GBM-Manager/releases/latest"),
     ("Discord developer portal", "https://discord.com/developers/applications"),
     ("Invite Raid-Helper", "https://raid-helper.xyz"),
-    ("Addon Discord", "https://discord.gg/5fbmYu8cY"),
+    ("Addon Discord", "https://discord.gg/57YxTP5j4K"),
     ("Addon on CurseForge", "https://www.curseforge.com/wow/addons/guildbymorricette"),
 ]
 
@@ -193,6 +196,9 @@ UPDATES AND LANGUAGE
 
 WHAT HAPPENS NEXT
   • Orders and events: posted a few seconds after each change in game (colour band).
+  • The colour band (addon 1.18.0): thin (4 pixels high), at the top left of the game. It only lights up during a
+    send, for about 15 seconds, then fades. Keep that corner visible (no window over it, game not minimised).
+    If GBM Manager was closed at that moment, the send is caught up on the next /reload.
   • Census: updated on every /reload or logout (the same message is edited).
   • On every /reload or logout, GBM Manager also catches up on anything it missed.
 
