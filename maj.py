@@ -11,6 +11,8 @@ import sys
 import tempfile
 import urllib.request
 
+import reseau
+
 from lang import T
 
 DEPOT = "Morricette/GBM-Manager"
@@ -33,7 +35,7 @@ def numero(v):
 def derniere():
     """(version, adresse du .exe) de la derniere version publiee, ou (None, None)."""
     req = urllib.request.Request(API, headers={"User-Agent": AGENT, "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=20) as r:
+    with reseau.ouvrir(req, timeout=20) as r:
         d = json.loads(r.read())
     exe = next((a.get("browser_download_url") for a in d.get("assets") or [] if a.get("name") == "GBM_Manager.exe"), None)
     return (d.get("tag_name") or "").lstrip("vV") or None, exe
@@ -53,7 +55,7 @@ def installer(adresse, journal):
     actuel = sys.executable
     neuf = actuel + ".nouveau"
     req = urllib.request.Request(adresse, headers={"User-Agent": AGENT})
-    with urllib.request.urlopen(req, timeout=120) as r, open(neuf, "wb") as f:
+    with reseau.ouvrir(req, timeout=120) as r, open(neuf, "wb") as f:
         while True:
             bloc = r.read(1 << 16)
             if not bloc:

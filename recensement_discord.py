@@ -13,6 +13,8 @@ import urllib.error
 import urllib.request
 import uuid
 
+import reseau
+
 from lang import T
 
 API = "https://discord.com/api/v10"
@@ -39,7 +41,7 @@ class Discord:
             entetes["Content-Type"] = "application/json"
         req = urllib.request.Request(url, data=donnees, headers=entetes, method=methode)
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with reseau.ouvrir(req, timeout=30) as r:
                 brut = r.read()
                 return json.loads(brut) if brut else None
         except urllib.error.HTTPError as e:

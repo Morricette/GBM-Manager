@@ -8,6 +8,8 @@ import time
 import urllib.error
 import urllib.request
 
+import reseau
+
 from lang import T
 
 API = "https://raid-helper.xyz/api/v4"
@@ -30,7 +32,7 @@ class RaidHelper:
             entetes["Content-Type"] = "application/json; charset=utf-8"
         req = urllib.request.Request(API + chemin, data=donnees, headers=entetes, method=methode)
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with reseau.ouvrir(req, timeout=30) as r:
                 brut = r.read()
                 return json.loads(brut) if brut else {}
         except urllib.error.HTTPError as e:
